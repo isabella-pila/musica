@@ -1,0 +1,139 @@
+from django.shortcuts import render, redirect
+from django.http import HttpResponse
+from .fuzzy import compute_fuzzy
+from .spotify_service import get_recommendations, create_playlist
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import io, base64
+
+from spotipy.oauth2 import SpotifyOAuth
+from django.conf import settings
+
+
+# =========================
+# OAuth
+# =========================
+def get_sp_oauth():
+    return SpotifyOAuth(
+    client_id=settings.SPOTIPY_CLIENT_ID,
+    client_secret=settings.SPOTIPY_CLIENT_SECRET,
+    redirect_uri=settings.SPOTIPY_REDIRECT_URI,
+    scope="playlist-modify-public playlist-modify-private",
+    show_dialog=True  # 🔥 FORÇA pedir permissão de novo
+)
+
+
+# =========================
+# Página inicial
+# =========================
+def index(request):
+    return render(request, 'index.html')
+
+
+# =========================
+# Resultado
+# =========================
+def result_view(request):
+    if request.method == 'POST':
+        data = {
+            'valence': float(request.POST.get('valence')),
+            'energy': float(request.POST.get('energy')),
+            'acousticness': float(request.POST.get('acousticness')),
+            'popularity': float(request.POST.get('popularity')),
+            'nostalgia': float(request.POST.get('nostalgia')),
+        }
+
+        genre = request.POST.get('genre')
+
+        score = compute_fuzzy(data)
+        tracks = get_recommendations(score, genre)
+
+        # gráfico
+        fig, ax = plt.subplots()
+        ax.bar(['Score'], [score])
+        ax.set_title('Score Fuzzy')
+
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        graph = base64.b64encode(buf.read()).decode('utf-8')
+        buf.close()
+        plt.close(fig)
+
+        # URIs válidas
+        track_uris = [t['uri'] for t in tracks if t.get('uri')]
+        print("URIS:", track_uris)
+
+        request.session['tracks'] = track_uris
+        request.session['score'] = score
+        request.session['genre'] = genre
+
+        # ⚠️ CASO ERRO
+        if not track_uris:
+            return render(request, 'result.html', {
+                'tracks': [],
+                'graph': graph,
+                'score': round(score, 3),
+                'error': "Erro ao processar músicas."
+            })
+
+        # ✅ CASO SUCESSO (FALTAVA ISSO)
+        return render(request, 'result.html', {
+            'tracks': tracks,
+            'graph': graph,
+            'score': round(score, 3)
+        })
+
+    return redirect('index')
+
+# =========================
+# Login Spotify
+# =========================
+def spotify_login(request):
+    request.session.pop('token_info', None)
+    sp_oauth = get_sp_oauth()
+    return redirect(sp_oauth.get_authorize_url())
+
+
+# =========================
+# Callback OAuth
+# =========================
+def callback(request):
+    sp_oauth = get_sp_oauth()
+    code = request.GET.get('code')
+
+    if not code:
+        return HttpResponse("Erro na autenticação.")
+
+    token_info = sp_oauth.get_access_token(code, as_dict=True)
+
+    # DEBUG
+    print("TOKEN:", token_info)
+
+    request.session['token_info'] = token_info
+
+    track_uris = request.session.get('tracks', [])
+    score = request.session.get('score', 0.5)
+    genre = request.session.get('genre', 'pop')
+
+    
+
+    if not track_uris:
+        return HttpResponse("Nenhuma música disponível.")
+    
+
+    try:
+        playlist_url = create_playlist(
+            token=token_info['access_token'],
+            track_uris=track_uris,
+            score=score,
+            genre=genre
+        )
+        print("PLAYLIST URL:", playlist_url)
+    except Exception as e:
+        return HttpResponse(f"Erro ao criar playlist: {e}")
+
+    return render(request, 'playlist_created.html', {
+        'playlist_url': playlist_url
+    })

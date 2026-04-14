@@ -1,0 +1,22 @@
+<h2>Score: {{ score }}</h2>
+<img src="data:image/png;base64,{{ graph }}" />
+
+{% if tracks %}
+<ul>
+{% for track in tracks %}
+  <li>
+    {% if track.album.images %}
+      <img src="{{ track.album.images.0.url }}" width="50">
+    {% endif %}
+    {{ track.name }} - {{ track.artists.0.name }}
+  </li>
+{% endfor %}
+</ul>
+
+<a href="{% url 'spotify_login' %}">
+  <button>🎵 Salvar playlist no Spotify</button>
+</a>
+
+{% else %}
+<p>Nenhuma recomendação encontrada.</p>
+{% endif %}

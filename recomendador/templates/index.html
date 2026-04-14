@@ -1,0 +1,29 @@
+"""
+<form method="POST" action="{% url 'result' %}">
+  {% csrf_token %}
+  <label>Felicidade</label>
+  <input type="range" step="0.01" name="valence" min="0" max="1">
+
+  <label>Energia</label>
+  <input type="range" step="0.01" name="energy" min="0" max="1">
+
+  <label>Acousticness</label>
+  <input type="range" step="0.01" name="acousticness" min="0" max="1">
+
+  <label>Popularidade</label>
+  <input type="range" name="popularity" min="0" max="100">
+
+  <label>Nostalgia</label>
+  <input type="range" step="0.01" name="nostalgia" min="0" max="1">
+
+  <label>Gênero</label>
+ <select name="genre">
+  <option value="rock">Rock</option>
+  <option value="pop">Pop</option>
+  <option value="hip-hop">Hip-Hop</option>
+  <option value="electronic">Eletrônica</option>
+</select>
+
+  <button type="submit">Recomendar</button>
+</form>
+"""
