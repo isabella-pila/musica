@@ -36,24 +36,33 @@ def index(request):
 # =========================
 def result_view(request):
     if request.method == 'POST':
-        data = {
-            'valence': float(request.POST.get('valence')),
-            'energy': float(request.POST.get('energy')),
+
+        # Dados para o fuzzy (emoção/sonoridade)
+        fuzzy_inputs = {
+            'valence':      float(request.POST.get('valence')),
+            'energy':       float(request.POST.get('energy')),
             'acousticness': float(request.POST.get('acousticness')),
+        }
+
+        # Dados que vão direto para o Spotify
+        spotify_filters = {
             'popularity': float(request.POST.get('popularity')),
-            'nostalgia': float(request.POST.get('nostalgia')),
+            'nostalgia':  float(request.POST.get('nostalgia')),
         }
 
         genre = request.POST.get('genre')
+        score = compute_fuzzy(fuzzy_inputs)
+        tracks = get_recommendations(score, genre, spotify_filters)
 
-        score = compute_fuzzy(data)
-        tracks = get_recommendations(score, genre)
+        # salva na sessão para criar playlist depois
+        request.session['tracks'] = [t['uri'] for t in tracks]
+        request.session['score']  = score
+        request.session['genre']  = genre
 
         # gráfico
         fig, ax = plt.subplots()
         ax.bar(['Score'], [score])
-        ax.set_title('Score Fuzzy')
-
+        ax.set_title('Score Fuzzy da Playlist')
         buf = io.BytesIO()
         plt.savefig(buf, format='png')
         buf.seek(0)
@@ -61,28 +70,10 @@ def result_view(request):
         buf.close()
         plt.close(fig)
 
-        # URIs válidas
-        track_uris = [t['uri'] for t in tracks if t.get('uri')]
-        print("URIS:", track_uris)
-
-        request.session['tracks'] = track_uris
-        request.session['score'] = score
-        request.session['genre'] = genre
-
-        # ⚠️ CASO ERRO
-        if not track_uris:
-            return render(request, 'result.html', {
-                'tracks': [],
-                'graph': graph,
-                'score': round(score, 3),
-                'error': "Erro ao processar músicas."
-            })
-
-        # ✅ CASO SUCESSO (FALTAVA ISSO)
         return render(request, 'result.html', {
             'tracks': tracks,
-            'graph': graph,
-            'score': round(score, 3)
+            'graph':  graph,
+            'score':  round(score, 3),
         })
 
     return redirect('index')

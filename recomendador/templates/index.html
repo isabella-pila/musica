@@ -1,29 +1,42 @@
-"""
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>FuzzyMood — Recomendador de Músicas</title>
+</head>
+<body>
+<h1>🎵 FuzzyMood — Recomendador de Músicas</h1>
+
 <form method="POST" action="{% url 'result' %}">
   {% csrf_token %}
-  <label>Felicidade</label>
-  <input type="range" step="0.01" name="valence" min="0" max="1">
 
-  <label>Energia</label>
-  <input type="range" step="0.01" name="energy" min="0" max="1">
+  <label>Felicidade (Valence)</label><br>
+  <input type="range" step="0.01" name="valence" min="0" max="1" value="0.5"><br><br>
 
-  <label>Acousticness</label>
-  <input type="range" step="0.01" name="acousticness" min="0" max="1">
+  <label>Energia</label><br>
+  <input type="range" step="0.01" name="energy" min="0" max="1" value="0.5"><br><br>
 
-  <label>Popularidade</label>
-  <input type="range" name="popularity" min="0" max="100">
+  <label>Acousticness</label><br>
+  <input type="range" step="0.01" name="acousticness" min="0" max="1" value="0.5"><br><br>
 
-  <label>Nostalgia</label>
-  <input type="range" step="0.01" name="nostalgia" min="0" max="1">
+  <label>Popularidade (0 = underground, 100 = mainstream)</label><br>
+  <input type="range" step="1" name="popularity" min="0" max="100" value="50"><br><br>
 
-  <label>Gênero</label>
- <select name="genre">
-  <option value="rock">Rock</option>
-  <option value="pop">Pop</option>
-  <option value="hip-hop">Hip-Hop</option>
-  <option value="electronic">Eletrônica</option>
-</select>
+  <label>Nostalgia (0 = lançamentos, 1 = clássicos)</label><br>
+  <input type="range" step="0.01" name="nostalgia" min="0" max="1" value="0.5"><br><br>
 
-  <button type="submit">Recomendar</button>
+  <label>Gênero</label><br>
+  <select name="genre">
+    <option value="rock">Rock</option>
+    <option value="pop" selected>Pop</option>
+    <option value="hip-hop">Hip-Hop</option>
+    <option value="electronic">Eletrônica</option>
+    <option value="jazz">Jazz</option>
+    <option value="classical">Clássica</option>
+    <option value="blues">Blues</option>
+  </select><br><br>
+
+  <button type="submit">🎶 Recomendar</button>
 </form>
-"""
+</body>
+</html>
