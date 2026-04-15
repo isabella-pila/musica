@@ -60,13 +60,13 @@ rules = [
     ctrl.Rule(valence['triste'] & acousticness['eletronica'], playlist_score['baixa']),
 
     # CATEGORIA 4: VIBES ESPECÍFICAS
-    # Academia / Pump Up
+   
     ctrl.Rule(valence['feliz']  & energy['agitada']  & acousticness['eletronica'], playlist_score['muito_alta']),
-    # Darkwave / Synthpop tenso
+    
     ctrl.Rule(valence['triste'] & energy['agitada']  & acousticness['eletronica'], playlist_score['baixa']),
     # Sofrência
     ctrl.Rule(valence['triste'] & energy['calma']    & acousticness['acustica'],   playlist_score['muito_baixa']),
-    # Bossa Nova / Chill
+    # Bossa Noa / Chill
     ctrl.Rule(valence['feliz']  & energy['calma']    & acousticness['acustica'],   playlist_score['media']),
     # Lo-fi / Study
     ctrl.Rule(valence['neutra'] & energy['calma']    & acousticness['eletronica'], playlist_score['media']),

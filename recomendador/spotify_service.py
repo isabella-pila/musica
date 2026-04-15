@@ -4,304 +4,319 @@ from django.conf import settings
 import requests
 import random
 
+# =========================
+# AUTENTICAÇÃO
+# =========================
 auth_manager = SpotifyClientCredentials(
     client_id=settings.SPOTIPY_CLIENT_ID,
     client_secret=settings.SPOTIPY_CLIENT_SECRET
 )
 sp = spotipy.Spotify(auth_manager=auth_manager)
 
+# =========================
+# MAPEAMENTO DE GÊNEROS
+# =========================
+GENRE_SEED_MAP = {
+    "funk":        "funk",
+    "sertanejo":   "sertanejo",
+    "pagode":      "pagode",
+    "forro":       "forró",
+    "forró":       "forró",
+    "mpb":         "mpb",
+    "samba":       "samba",
+    "axe":         "axé",
+    "axé":         "axé",
+    "rock":        "rock",
+    "pop":         "pop",
+    "hip-hop":     "hip hop",
+    "hip hop":     "hip hop",
+    "rap":         "rap",
+    "electronic":  "eletrônica",
+    "eletronica":  "eletrônica",
+    "eletrônica":  "eletrônica",
+    "edm":         "edm",
+    "jazz":        "jazz",
+    "classical":   "clássica",
+    "classica":    "clássica",
+    "clássica":    "clássica",
+    "blues":       "blues",
+    "reggaeton":   "reggaeton",
+    "r&b":         "r&b",
+    "indie":       "indie",
+    "metal":       "metal",
+    "country":     "country",
+}
 
-# =====================================================================
-# NOTA IMPORTANTE (Abril 2026):
-# A Spotify Web API removeu o campo "popularity" em fev/2026.
-# O endpoint sp.tracks() retorna 403 com ClientCredentials.
-# O limit maximo do search agora eh 10.
-#
-# Estrategia adaptada:
-# - Popularidade: controlada via queries (ex: "top hits" vs "underground")
-# - Nostalgia: controlada via filtro year: na query
-# - Busca combina resultados de multiplas queries para mais variedade
-# - Deduplicacao por track ID impede repeticoes
-# =====================================================================
+def normalize_genre(genre):
+    """Normaliza o gênero do formulário."""
+    if not genre:
+        return "pop"
+    genre = genre.lower().strip()
+    return GENRE_SEED_MAP.get(genre, genre)
 
 
 # =========================
-# NOSTALGIA -> FILTRO DE ANO
+# QUERIES TEMÁTICAS POR MOOD + GÊNERO
 # =========================
-def nostalgia_year_filter(nosta):
-    """Traduz nostalgia (0-1) em filtro year: do Spotify."""
-    if nosta >= 0.8:
-        return "year:1960-1989"
-    elif nosta >= 0.6:
-        return "year:1990-2009"
-    elif nosta >= 0.4:
-        return ""
-    elif nosta >= 0.2:
-        return "year:2018-2024"
+# Muitas queries variadas para compensar o limite de 10 tracks por busca.
+# Cada query traz um ângulo diferente do mesmo sentimento.
+MOOD_QUERIES = {
+    # Score alto (≥0.7) — feliz, animado, festa
+    'alto': {
+        'funk':        ["funk pra festa", "funk animado", "funk pancadao",
+                        "baile funk", "funk bass", "funk 2025",
+                        "funk hit", "mc funk"],
+        'sertanejo':   ["sertanejo animado", "sertanejo festa",
+                        "sertanejo top", "esquenta sertanejo",
+                        "sertanejo 2025 hit", "sertanejo piseiro",
+                        "sertanejo ao vivo"],
+        'pagode':      ["pagode animado", "pagode churras",
+                        "roda pagode", "pagode 2025",
+                        "pagode hit", "pagode ao vivo"],
+        'forró':       ["forro animado", "forro pe de serra",
+                        "forro hit", "sao joao forro",
+                        "forro 2025", "piseiro"],
+        'mpb':         ["mpb alegre", "mpb pra cima",
+                        "mpb classico", "mpb animada"],
+        'samba':       ["samba roda", "samba enredo",
+                        "samba carnaval", "samba animado",
+                        "pagode samba festa"],
+        'axé':         ["axe carnaval", "axe hit",
+                        "axe animado", "trio eletrico",
+                        "axe bahia"],
+        'pop':         ["pop hit 2025", "feel good pop",
+                        "pop dance", "pop alegre",
+                        "top pop", "pop brasil"],
+        'rock':        ["rock energy", "rock hit",
+                        "rock animado", "rock festa",
+                        "rock nacional animado"],
+        'hip hop':     ["hip hop hit", "rap hype",
+                        "trap hit", "rap festa",
+                        "rap brasileiro sucesso"],
+        'eletrônica':  ["edm hit", "dance hit",
+                        "electronic party", "festival edm",
+                        "eletronica animada"],
+        'jazz':        ["jazz swing", "upbeat jazz",
+                        "jazz feel good", "jazz alegre"],
+        'clássica':    ["classical uplifting", "classical energy",
+                        "classical alegre"],
+        'blues':       ["blues rock", "blues upbeat",
+                        "blues groove", "blues animado"],
+        'reggaeton':   ["reggaeton hit", "perreo",
+                        "reggaeton party", "reggaeton 2025"],
+        'rap':         ["rap brasileiro hit", "rap nacional",
+                        "trap br", "rap sucesso"],
+    },
+    # Score médio (0.4–0.7) — chill, tranquilo, neutro
+    'medio': {
+        'funk':        ["funk melody", "funk romantico",
+                        "funk suave", "funk love",
+                        "funk lento"],
+        'sertanejo':   ["sertanejo universitario", "sertanejo romantico",
+                        "sertanejo 2025", "sertanejo top",
+                        "sertanejo amor", "sertanejo acustico"],
+        'pagode':      ["pagode romantico", "pagode suave",
+                        "pagode relax", "pagode amor"],
+        'forró':       ["forro romantico", "forro suave",
+                        "forro xote", "forro amor"],
+        'mpb':         ["mpb classica", "mpb essencial",
+                        "bossa nova", "mpb tranquila",
+                        "mpb acustico"],
+        'samba':       ["samba jazz", "bossa nova chill",
+                        "samba suave", "samba romantico"],
+        'axé':         ["axe romantico", "axe suave"],
+        'pop':         ["chill pop", "pop relax",
+                        "indie pop", "pop acoustic",
+                        "soft pop", "pop tranquilo"],
+        'rock':        ["rock alternativo", "indie rock",
+                        "soft rock", "rock acustico",
+                        "rock romantico"],
+        'hip hop':     ["lo-fi hip hop", "chill rap",
+                        "hip hop relax", "rap chill",
+                        "rap acustico"],
+        'eletrônica':  ["chill electronic", "lo-fi beats",
+                        "ambient music", "chillwave",
+                        "eletronica calma"],
+        'jazz':        ["smooth jazz", "jazz lounge",
+                        "jazz relax", "jazz piano"],
+        'clássica':    ["classical relax", "piano classico",
+                        "classical study", "musica classica"],
+        'blues':       ["slow blues", "blues acoustic",
+                        "blues chill", "blues suave"],
+        'reggaeton':   ["reggaeton lento", "reggaeton romantico"],
+        'rap':         ["rap consciente", "rap nacional chill",
+                        "rap acustico", "rap reflexao"],
+    },
+    # Score baixo (<0.4) — triste, melancólico, sofrência
+    'baixo': {
+        'funk':        ["funk triste", "funk melody triste",
+                        "funk sofrencia", "funk sad"],
+        'sertanejo':   ["sofrencia sertaneja", "sertanejo sofrencia",
+                        "sertanejo triste", "modao sertanejo",
+                        "sertanejo dor cotovelo", "sertanejo fossa",
+                        "sertanejo sofrimento"],
+        'pagode':      ["pagode triste", "pagode sofrencia",
+                        "pagode saudade", "pagode dor"],
+        'forró':       ["forro triste", "forro sofrencia",
+                        "forro saudade", "forro dor"],
+        'mpb':         ["mpb triste", "mpb melancolica",
+                        "mpb saudade", "mpb acustica triste"],
+        'samba':       ["samba fossa", "samba triste",
+                        "samba saudade", "samba dor"],
+        'axé':         ["axe triste", "axe saudade"],
+        'pop':         ["sad pop", "sad songs",
+                        "heartbreak", "broken heart",
+                        "crying playlist", "musica triste",
+                        "pop triste"],
+        'rock':        ["sad rock",
+                        "rock melancolico", "post rock sad"],
+        'hip hop':     ["sad rap", "emo rap",
+                        "rap triste", "sad trap",
+                        "hip hop triste"],
+        'eletrônica':  ["sad electronic", "dark electronic",
+                        "melancholic beats", "eletronica triste"],
+        'jazz':        ["jazz melancolico", "jazz triste",
+                        "blue jazz", "jazz noir"],
+        'clássica':    ["classical sad", "classical melancholic",
+                        "sad piano", "musica classica triste"],
+        'blues':       ["sad blues", "delta blues",
+                        "blues triste", "blues melancolico"],
+        'reggaeton':   ["reggaeton triste", "reggaeton sad"],
+        'rap':         ["rap triste", "rap depressao",
+                        "rap sad brasileiro", "rap sofrimento"],
+    },
+}
+
+def get_mood_queries(score, genre_label):
+    """Retorna queries temáticas baseadas no score e gênero."""
+    if score >= 0.7:
+        mood_level = 'alto'
+    elif score >= 0.4:
+        mood_level = 'medio'
     else:
-        return "year:2024-2026"
+        mood_level = 'baixo'
+
+    # Tenta o gênero normalizado
+    queries = MOOD_QUERIES.get(mood_level, {}).get(genre_label, [])
+
+    # Fallback genérico
+    if not queries:
+        fallback = {
+            'alto':  [f"{genre_label} happy", f"{genre_label} party",
+                      f"{genre_label} energy", f"{genre_label} hits",
+                      f"{genre_label} animado", f"{genre_label} festa"],
+            'medio': [f"{genre_label} chill", f"{genre_label} relax",
+                      f"{genre_label} vibes", f"{genre_label} acoustic",
+                      f"{genre_label} romantico"],
+            'baixo': [f"{genre_label} sad", f"{genre_label} triste",
+                      f"{genre_label} emotional", f"{genre_label} sofrencia",
+                      f"{genre_label} melancolico"],
+        }
+        queries = fallback[mood_level]
+
+    return queries
 
 
 # =========================
-# SCORE -> MOOD TAGS
+# CHAVE ÚNICA (ANTI DUPLICAÇÃO)
 # =========================
-def score_to_tags(score, genre):
-    """
-    Retorna uma LISTA de tags curtas para busca.
-    Tags curtas funcionam melhor no Spotify do que frases longas.
-    Frases longas fazem o Spotify buscar por nome literal.
-    """
-    # Tags especificas por genero + score
-    genre_tags = {
-        "rock": {
-            0.80: ["hard rock", "rock anthem", "rock energy"],
-            0.60: ["rock", "alternative rock", "classic rock"],
-            0.40: ["indie rock", "acoustic rock", "soft rock"],
-            0.00: ["sad rock"],
-        },
-        "pop": {
-            0.80: ["dance pop", "pop hits", "party pop"],
-            0.60: ["pop", "synth pop", "electropop"],
-            0.40: ["acoustic pop", "indie pop", "chill pop"],
-            0.00: ["sad pop", "dark pop", "slow pop"],
-        },
-        "hip-hop": {
-            0.80: ["trap", "hype rap", "rap hits"],
-            0.60: ["hip hop", "rap", "boom bap"],
-            0.40: ["lo-fi hip hop", "chill rap", "conscious rap"],
-            0.00: ["emo rap", "dark rap", "sad rap"],
-        },
-        "electronic": {
-            0.80: ["EDM", "house music", "dance music"],
-            0.60: ["electronic", "synthwave", "progressive house"],
-            0.40: ["chillwave", "downtempo", "ambient electronic"],
-            0.00: ["dark ambient", "drone", "dark electronic"],
-        },
-        "jazz": {
-            0.80: ["swing jazz", "big band", "latin jazz"],
-            0.60: ["smooth jazz", "jazz", "bossa nova"],
-            0.40: ["cool jazz", "jazz piano", "jazz ballad"],
-            0.00: ["dark jazz", "noir jazz", "melancholy jazz"],
-        },
-        "classical": {
-            0.80: ["orchestral", "symphony", "triumphant classical"],
-            0.60: ["classical", "romantic classical", "violin classical"],
-            0.40: ["piano classical", "calm classical", "chamber music"],
-            0.00: ["requiem", "somber classical", "funeral march"],
-        },
-        "blues": {
-            0.80: ["electric blues", "blues rock", "upbeat blues"],
-            0.60: ["blues", "rhythm and blues", "chicago blues"],
-            0.40: ["acoustic blues", "slow blues", "folk blues"],
-            0.00: ["delta blues", "sad blues", "dark blues"],
-        },
-    }
-
-    # Encontra o nivel de score adequado
-    tags_by_level = genre_tags.get(genre, {})
-    for threshold in [0.80, 0.60, 0.40, 0.00]:
-        if score >= threshold:
-            return tags_by_level.get(threshold, [genre])
-
-    return [genre]
-
-
-# =========================
-# BUSCA COM DEDUPLICACAO
-# =========================
-def _search_tracks(query, seen_ids=None):
-    """
-    Busca tracks no Spotify (limit=10, maximo da API).
-    Retorna apenas tracks cujo ID nao esta em seen_ids (deduplicacao).
-    """
-    if seen_ids is None:
-        seen_ids = set()
-
+def track_key(track):
+    """Gera chave única para identificar duplicatas."""
     try:
-        # Offset aleatorio para variedade (entre 0 e 20)
-        offset = random.randint(0, 2) * 10
-        results = sp.search(q=query, type="track", limit=10, offset=offset, market="US")
+        name = track.get("name", "").lower().strip()
+        artist = track.get("artists", [{}])[0].get("name", "").lower().strip()
+        return f"{name}|{artist}"
+    except:
+        return None
+
+
+# =========================
+# BUSCAR TRACKS POR QUERY
+# =========================
+def search_tracks(query, limit=10):
+    """
+    Busca tracks diretamente pela API de search.
+    Limite máximo de 10 em development mode do Spotify.
+    """
+    try:
+        results = sp.search(q=query, type="track", limit=min(limit, 10))
         tracks = results.get("tracks", {}).get("items", [])
+        print(f"[SEARCH] '{query}' -> {len(tracks)} resultados")
+        return tracks
+    except Exception as e:
+        print(f"[SEARCH] Erro ao buscar '{query}': {e}")
+        return []
 
-        if not tracks and offset > 0:
-            # Se nao encontrou com offset, tenta sem
-            results = sp.search(q=query, type="track", limit=10, offset=0, market="US")
-            tracks = results.get("tracks", {}).get("items", [])
 
-        # Deduplicar
-        unique = []
+# =========================
+# COLETA DE MÚSICAS COM MÚLTIPLAS QUERIES
+# =========================
+def collect_tracks(queries, tracks_per_query=10):
+    """
+    Para cada query, busca tracks e combina.
+    Remove duplicatas pelo track_key.
+    Com limite de 10 por query, usamos múltiplas queries
+    para obter uma boa variedade.
+    """
+    all_tracks = []
+    seen_keys = set()
+
+    for query in queries:
+        tracks = search_tracks(query, limit=tracks_per_query)
         for t in tracks:
-            tid = t.get("id")
-            if tid and tid not in seen_ids:
-                seen_ids.add(tid)
-                unique.append(t)
-
-        return unique
-
-    except Exception as e:
-        print(f"Erro em _search_tracks ({query}): {e}")
-        return []
-
-
-# =========================
-# BUSCA POR ARTISTAS DO GENERO (FALLBACK)
-# =========================
-def _search_by_artists(genre, year_filter="", seen_ids=None):
-    """Fallback: busca artistas do genero e pega tracks deles."""
-    if seen_ids is None:
-        seen_ids = set()
-
-    try:
-        results = sp.search(q=f"genre:{genre}", type="artist", limit=5, market="US")
-        artists = results.get("artists", {}).get("items", [])
-
-        if not artists:
-            return []
-
-        all_tracks = []
-        for artist in artists[:4]:
-            artist_name = artist.get("name", "")
-            if not artist_name:
+            if not t:
                 continue
+            key = track_key(t)
+            if key and key not in seen_keys:
+                seen_keys.add(key)
+                all_tracks.append(t)
 
-            try:
-                q = f"artist:{artist_name}"
-                if year_filter:
-                    q += f" {year_filter}"
-
-                artist_results = sp.search(q=q, type="track", limit=5, market="US")
-                for t in artist_results.get("tracks", {}).get("items", []):
-                    tid = t.get("id")
-                    if tid and tid not in seen_ids:
-                        seen_ids.add(tid)
-                        all_tracks.append(t)
-            except Exception:
-                continue
-
-        return all_tracks
-
-    except Exception as e:
-        print(f"Erro em _search_by_artists ({genre}): {e}")
-        return []
+    return all_tracks
 
 
 # =========================
-# RECOMENDACAO PRINCIPAL
+# RECOMENDAÇÃO PRINCIPAL
 # =========================
 def get_recommendations(score, genre, data=None):
-    genre = (genre or "").strip().lower()
-
-    VALID_GENRES = ["rock", "pop", "hip-hop", "electronic", "jazz", "classical", "blues"]
-    if genre not in VALID_GENRES:
-        genre = "pop"
-
+    """
+    Função principal de recomendação.
+    Usa múltiplas queries temáticas por mood+gênero,
+    busca tracks diretamente pela API de search,
+    e retorna top 10 músicas únicas.
+    """
+    genre_label = normalize_genre(genre)
     score = max(0.0, min(float(score), 1.0))
     data = data or {}
 
-    # ---- Extrair parametros ----
-    nosta = float(data.get('nostalgia', 0.5))
-    pop = float(data.get('popularity', 50))
+    # Gera queries temáticas baseadas no score fuzzy
+    queries = get_mood_queries(score, genre_label)
 
-    tags = score_to_tags(score, genre)
-    year_filter = nostalgia_year_filter(nosta)
+    print(f"\n{'='*50}")
+    print(f"[RECOMENDACAO] Genero: {genre_label} | Score: {score:.2f}")
+    print(f"[RECOMENDACAO] Queries ({len(queries)}): {queries}")
+    print(f"{'='*50}")
 
-    print(f"[FUZZY] TAGS: {tags} | SCORE: {score:.2f} | GENRE: {genre}")
-    print(f"[FILTROS] POP: {pop} | NOSTALGIA: {nosta} -> {year_filter or 'qualquer epoca'}")
+    # Busca com todas as queries
+    all_tracks = collect_tracks(queries, tracks_per_query=10)
 
-    # ---- Construir queries usando genre: filter do Spotify ----
-    # O Spotify Search aceita "genre:" como filtro real, nao como texto livre
-    queries = []
+    print(f"[TOTAL] {len(all_tracks)} musicas unicas encontradas")
 
-    for tag in tags:
-        # Tag + filtro de ano (mais especifico)
-        if year_filter:
-            queries.append(f"genre:{genre} {tag} {year_filter}")
-
-        # Tag + genero (sem ano)
-        # So adiciona "genre:" se a tag nao contem o nome do genero
-        if genre not in tag.lower():
-            queries.append(f"genre:{genre} {tag}")
-        else:
-            queries.append(tag)
-
-    # Queries extras baseadas em popularidade
-    if pop >= 75:
-        if year_filter:
-            queries.append(f"genre:{genre} {year_filter}")
-        queries.append(f"genre:{genre} hits")
-        queries.append(f"best of {genre}")
-    elif pop < 25:
-        queries.append(f"genre:{genre} underground")
-        queries.append(f"genre:{genre} indie")
-
-    # Fallback generico
-    queries.append(f"genre:{genre}")
-
-    # Remover duplicatas mantendo ordem
-    seen_queries = set()
-    unique_queries = []
-    for q in queries:
-        q = q.strip()
-        if q and q not in seen_queries:
-            seen_queries.add(q)
-            unique_queries.append(q)
-
-    # ---- COMBINAR resultados de multiplas queries para variedade ----
-    seen_ids = set()
-    all_tracks = []
-
-    for q in unique_queries:
-        print(f"  Buscando: '{q}'")
-        tracks = _search_tracks(q, seen_ids)
-
-        if tracks:
-            print(f"    + {len(tracks)} novas musicas")
-            all_tracks.extend(tracks)
-
-        # Se ja temos 15+, acumulamos o suficiente
-        if len(all_tracks) >= 15:
-            break
-
-    # ---- Fallback: artistas do genero ----
-    if len(all_tracks) < 5:
-        print(f"  Fallback: artistas de '{genre}'...")
-        artist_tracks = _search_by_artists(genre, year_filter, seen_ids)
-        if artist_tracks:
-            print(f"    + {len(artist_tracks)} musicas de artistas")
-            all_tracks.extend(artist_tracks)
-
-    # ---- Fallback final ----
+    # Fallback: se nenhuma query retornou resultado, tenta query genérica
     if not all_tracks:
-        print("  Fallback final: busca generica...")
-        all_tracks = _search_tracks(genre, seen_ids)
+        print("[FALLBACK] Tentando query generica...")
+        fallback_queries = [genre_label, f"{genre_label} musica", f"{genre_label} hit"]
+        all_tracks = collect_tracks(fallback_queries, tracks_per_query=10)
 
-    if not all_tracks:
-        print("[AVISO] Nenhuma musica encontrada")
-        return []
-
-    # ---- Selecionar e embaralhar ----
-    # Para popularidade baixa, prefere os ultimos resultados (menos conhecidos)
-    if pop < 30:
-        all_tracks = list(reversed(all_tracks))
-
-    # Embaralha para nao repetir a mesma ordem
+    # Embaralha para variedade e pega top 10
     random.shuffle(all_tracks)
-
     result = all_tracks[:10]
 
-    print(f"  [RESULTADO] {len(result)} musicas selecionadas de {len(all_tracks)} candidatas:")
-    _log_tracks(result)
+    print(f"\n[RESULTADO] {len(result)} musicas recomendadas:")
+    for i, t in enumerate(result, 1):
+        artist = t.get('artists', [{}])[0].get('name', '?')
+        print(f"  {i}. {t.get('name', '?')} - {artist}")
 
     return result
-
-
-def _log_tracks(tracks):
-    """Imprime as tracks encontradas para debug."""
-    for t in tracks[:5]:
-        name = t.get("name", "?")
-        artist = t.get("artists", [{}])[0].get("name", "?")
-        year = t.get("album", {}).get("release_date", "??")[:4]
-        print(f"    -> {name} - {artist} (ano={year})")
 
 
 # =========================
@@ -313,24 +328,38 @@ def create_playlist(token, track_uris, score, genre):
         "Content-Type": "application/json"
     }
 
-    requests.get("https://api.spotify.com/v1/me", headers=headers).raise_for_status()
+    try:
+        requests.get("https://api.spotify.com/v1/me", headers=headers).raise_for_status()
 
-    playlist_resp = requests.post(
-        "https://api.spotify.com/v1/me/playlists",
-        headers=headers,
-        json={
-            "name":        f"FuzzyMood - {genre.title()} ({round(score * 100)}%)",
-            "public":      True,
-            "description": f"Playlist gerada pelo FuzzyMood. Score: {round(score, 3)}"
-        }
-    )
-    playlist_resp.raise_for_status()
-    playlist = playlist_resp.json()
+        # Nomes temáticos por mood
+        if score >= 0.7:
+            mood_label = "Energia Total 🔥"
+        elif score >= 0.4:
+            mood_label = "Vibes Chill 🌊"
+        else:
+            mood_label = "Sentimentos 💜"
 
-    requests.post(
-        f"https://api.spotify.com/v1/playlists/{playlist['id']}/items",
-        headers=headers,
-        json={"uris": track_uris}
-    ).raise_for_status()
+        playlist_resp = requests.post(
+            "https://api.spotify.com/v1/me/playlists",
+            headers=headers,
+            json={
+                "name": f"FuzzyMood — {genre.title()} | {mood_label}",
+                "public": True,
+                "description": f"Playlist gerada pelo sistema fuzzy (score: {round(score * 100)}%)"
+            }
+        )
+        playlist_resp.raise_for_status()
+        playlist = playlist_resp.json()
 
-    return playlist["external_urls"]["spotify"]
+        if track_uris:
+            requests.post(
+                f"https://api.spotify.com/v1/playlists/{playlist['id']}/items",
+                headers=headers,
+                json={"uris": track_uris}
+            ).raise_for_status()
+
+        return playlist["external_urls"]["spotify"]
+
+    except Exception as e:
+        print(f"Erro ao criar playlist: {e}")
+        return None

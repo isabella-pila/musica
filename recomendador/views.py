@@ -46,8 +46,7 @@ def result_view(request):
 
         # Dados que vão direto para o Spotify
         spotify_filters = {
-            'popularity': float(request.POST.get('popularity')),
-            'nostalgia':  float(request.POST.get('nostalgia')),
+            'popularity': float(request.POST.get('popularity', 50)),
         }
 
         genre = request.POST.get('genre')
@@ -78,9 +77,7 @@ def result_view(request):
 
     return redirect('index')
 
-# =========================
-# Login Spotify
-# =========================
+
 def spotify_login(request):
     request.session.pop('token_info', None)
     sp_oauth = get_sp_oauth()
