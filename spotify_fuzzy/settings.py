@@ -18,6 +18,7 @@ load_dotenv()
 SPOTIPY_CLIENT_ID = os.getenv('SPOTIPY_CLIENT_ID')
 SPOTIPY_CLIENT_SECRET = os.getenv('SPOTIPY_CLIENT_SECRET')
 SPOTIPY_REDIRECT_URI = os.getenv('SPOTIPY_REDIRECT_URI')
+LASTFM_API_KEY = os.getenv('LASTFM_API_KEY')
 
 
 from pathlib import Path

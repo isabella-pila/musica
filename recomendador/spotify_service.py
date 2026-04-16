@@ -5,273 +5,258 @@ import requests
 import random
 
 # =========================
-# AUTENTICAÇÃO
+# AUTENTICAÇÃO SPOTIFY
 # =========================
-auth_manager = SpotifyClientCredentials(
-    client_id=settings.SPOTIPY_CLIENT_ID,
-    client_secret=settings.SPOTIPY_CLIENT_SECRET
-)
-sp = spotipy.Spotify(auth_manager=auth_manager)
+_sp_user = None
+
+def build_sp(access_token):
+    global _sp_user
+    _sp_user = spotipy.Spotify(auth=access_token)
+    return _sp_user
+
+def get_sp():
+    auth = SpotifyClientCredentials(
+        client_id=settings.SPOTIPY_CLIENT_ID,
+        client_secret=settings.SPOTIPY_CLIENT_SECRET
+    )
+    return spotipy.Spotify(auth_manager=auth)
+
 
 # =========================
-# MAPEAMENTO DE GÊNEROS
+# LAST.FM CONFIG
+# =========================
+LASTFM_API_KEY = settings.LASTFM_API_KEY
+LASTFM_BASE    = "https://ws.audioscrobbler.com/2.0/"
+
+
+# =========================
+# MAPEAMENTO GÊNERO
 # =========================
 GENRE_SEED_MAP = {
-    "funk":        "funk",
-    "sertanejo":   "sertanejo",
-    "pagode":      "pagode",
-    "forro":       "forró",
-    "forró":       "forró",
-    "mpb":         "mpb",
-    "samba":       "samba",
-    "axe":         "axé",
-    "axé":         "axé",
-    "rock":        "rock",
-    "pop":         "pop",
-    "hip-hop":     "hip hop",
-    "hip hop":     "hip hop",
-    "rap":         "rap",
-    "electronic":  "eletrônica",
-    "eletronica":  "eletrônica",
-    "eletrônica":  "eletrônica",
-    "edm":         "edm",
-    "jazz":        "jazz",
-    "classical":   "clássica",
-    "classica":    "clássica",
-    "clássica":    "clássica",
-    "blues":       "blues",
-    "reggaeton":   "reggaeton",
-    "r&b":         "r&b",
-    "indie":       "indie",
-    "metal":       "metal",
-    "country":     "country",
+    "funk":       "funk",
+    "sertanejo":  "sertanejo",
+    "pagode":     "pagode",
+    "forro":      "forró",
+    "forró":      "forró",
+    "mpb":        "mpb",
+    "samba":      "samba",
+    "axe":        "axé",
+    "axé":        "axé",
+    "rock":       "rock",
+    "pop":        "pop",
+    "hip-hop":    "hip hop",
+    "hip hop":    "hip hop",
+    "rap":        "rap",
+    "electronic": "eletrônica",
+    "eletronica": "eletrônica",
+    "eletrônica": "eletrônica",
+    "edm":        "eletrônica",
+    "jazz":       "jazz",
+    "classical":  "clássica",
+    "classica":   "clássica",
+    "clássica":   "clássica",
+    "blues":      "blues",
+    "reggaeton":  "reggaeton",
+    "r&b":        "r&b",
+    "indie":      "indie",
+    "metal":      "metal",
+    "country":    "country",
 }
 
 def normalize_genre(genre):
-    """Normaliza o gênero do formulário."""
     if not genre:
         return "pop"
-    genre = genre.lower().strip()
-    return GENRE_SEED_MAP.get(genre, genre)
+    return GENRE_SEED_MAP.get(genre.lower().strip(), genre.lower().strip())
+
+def get_mood_level(score):
+    if score >= 0.7:
+        return 'alto'
+    elif score >= 0.4:
+        return 'medio'
+    return 'baixo'
 
 
 # =========================
-# QUERIES TEMÁTICAS POR MOOD + GÊNERO
+# TAGS LAST.FM POR MOOD + GÊNERO
 # =========================
-# Muitas queries variadas para compensar o limite de 10 tracks por busca.
-# Cada query traz um ângulo diferente do mesmo sentimento.
-MOOD_QUERIES = {
-    # Score alto (≥0.7) — feliz, animado, festa
+LASTFM_TAGS = {
     'alto': {
-        'funk':        ["funk pra festa", "funk animado", "funk pancadao",
-                        "baile funk", "funk bass", "funk 2025",
-                        "funk hit", "mc funk"],
-        'sertanejo':   ["sertanejo animado", "sertanejo festa",
-                        "sertanejo top", "esquenta sertanejo",
-                        "sertanejo 2025 hit", "sertanejo piseiro",
-                        "sertanejo ao vivo"],
-        'pagode':      ["pagode animado", "pagode churras",
-                        "roda pagode", "pagode 2025",
-                        "pagode hit", "pagode ao vivo"],
-        'forró':       ["forro animado", "forro pe de serra",
-                        "forro hit", "sao joao forro",
-                        "forro 2025", "piseiro"],
-        'mpb':         ["mpb alegre", "mpb pra cima",
-                        "mpb classico", "mpb animada"],
-        'samba':       ["samba roda", "samba enredo",
-                        "samba carnaval", "samba animado",
-                        "pagode samba festa"],
-        'axé':         ["axe carnaval", "axe hit",
-                        "axe animado", "trio eletrico",
-                        "axe bahia"],
-        'pop':         ["pop hit 2025", "feel good pop",
-                        "pop dance", "pop alegre",
-                        "top pop", "pop brasil"],
-        'rock':        ["rock energy", "rock hit",
-                        "rock animado", "rock festa",
-                        "rock nacional animado"],
-        'hip hop':     ["hip hop hit", "rap hype",
-                        "trap hit", "rap festa",
-                        "rap brasileiro sucesso"],
-        'eletrônica':  ["edm hit", "dance hit",
-                        "electronic party", "festival edm",
-                        "eletronica animada"],
-        'jazz':        ["jazz swing", "upbeat jazz",
-                        "jazz feel good", "jazz alegre"],
-        'clássica':    ["classical uplifting", "classical energy",
-                        "classical alegre"],
-        'blues':       ["blues rock", "blues upbeat",
-                        "blues groove", "blues animado"],
-        'reggaeton':   ["reggaeton hit", "perreo",
-                        "reggaeton party", "reggaeton 2025"],
-        'rap':         ["rap brasileiro hit", "rap nacional",
-                        "trap br", "rap sucesso"],
+        'funk':       ["baile funk", "funk carioca", "funk brasileiro"],
+        'sertanejo':  ["sertanejo", "sertanejo universitario", "forro"],
+        'pagode':     ["pagode", "samba", "brazilian music"],
+        'forró':      ["forro", "sertanejo", "brazilian music"],
+        'mpb':        ["mpb", "bossa nova", "brazilian music"],
+        'samba':      ["samba", "pagode", "brazilian music"],
+        'axé':        ["axe", "brazilian music"],
+        'pop':        ["pop", "dance pop", "feel good"],
+        'rock':       ["rock", "classic rock", "alternative rock"],
+        'hip hop':    ["hip-hop", "rap", "trap"],
+        'eletrônica': ["electronic", "edm", "dance"],
+        'jazz':       ["jazz", "swing", "big band"],
+        'clássica':   ["classical", "orchestra", "piano"],
+        'blues':      ["blues", "blues rock"],
+        'reggaeton':  ["reggaeton", "latin"],
+        'rap':        ["rap", "hip-hop", "trap"],
+        'indie':      ["indie pop", "indie rock"],
+        'metal':      ["metal", "heavy metal"],
+        'country':    ["country", "country pop"],
+        'r&b':        ["r&b", "soul"],
     },
-    # Score médio (0.4–0.7) — chill, tranquilo, neutro
     'medio': {
-        'funk':        ["funk melody", "funk romantico",
-                        "funk suave", "funk love",
-                        "funk lento"],
-        'sertanejo':   ["sertanejo universitario", "sertanejo romantico",
-                        "sertanejo 2025", "sertanejo top",
-                        "sertanejo amor", "sertanejo acustico"],
-        'pagode':      ["pagode romantico", "pagode suave",
-                        "pagode relax", "pagode amor"],
-        'forró':       ["forro romantico", "forro suave",
-                        "forro xote", "forro amor"],
-        'mpb':         ["mpb classica", "mpb essencial",
-                        "bossa nova", "mpb tranquila",
-                        "mpb acustico"],
-        'samba':       ["samba jazz", "bossa nova chill",
-                        "samba suave", "samba romantico"],
-        'axé':         ["axe romantico", "axe suave"],
-        'pop':         ["chill pop", "pop relax",
-                        "indie pop", "pop acoustic",
-                        "soft pop", "pop tranquilo"],
-        'rock':        ["rock alternativo", "indie rock",
-                        "soft rock", "rock acustico",
-                        "rock romantico"],
-        'hip hop':     ["lo-fi hip hop", "chill rap",
-                        "hip hop relax", "rap chill",
-                        "rap acustico"],
-        'eletrônica':  ["chill electronic", "lo-fi beats",
-                        "ambient music", "chillwave",
-                        "eletronica calma"],
-        'jazz':        ["smooth jazz", "jazz lounge",
-                        "jazz relax", "jazz piano"],
-        'clássica':    ["classical relax", "piano classico",
-                        "classical study", "musica classica"],
-        'blues':       ["slow blues", "blues acoustic",
-                        "blues chill", "blues suave"],
-        'reggaeton':   ["reggaeton lento", "reggaeton romantico"],
-        'rap':         ["rap consciente", "rap nacional chill",
-                        "rap acustico", "rap reflexao"],
+        'funk':       ["funk melody", "funk"],
+        'sertanejo':  ["sertanejo romantico", "sertanejo"],
+        'pagode':     ["pagode romantico", "pagode"],
+        'forró':      ["forro romantico", "forro"],
+        'mpb':        ["mpb", "bossa nova"],
+        'samba':      ["bossa nova", "samba jazz"],
+        'axé':        ["axe", "brazilian music"],
+        'pop':        ["pop", "indie pop", "acoustic pop"],
+        'rock':       ["soft rock", "indie rock", "acoustic"],
+        'hip hop':    ["lo-fi hip hop", "chill hop"],
+        'eletrônica': ["chillwave", "ambient", "lo-fi"],
+        'jazz':       ["smooth jazz", "jazz"],
+        'clássica':   ["classical", "piano"],
+        'blues':      ["blues", "slow blues"],
+        'reggaeton':  ["reggaeton romantico", "latin"],
+        'rap':        ["rap", "hip-hop"],
+        'indie':      ["indie", "dream pop"],
+        'metal':      ["progressive metal"],
+        'country':    ["country", "acoustic country"],
+        'r&b':        ["r&b", "soul", "neo soul"],
     },
-    # Score baixo (<0.4) — triste, melancólico, sofrência
     'baixo': {
-        'funk':        ["funk triste", "funk melody triste",
-                        "funk sofrencia", "funk sad"],
-        'sertanejo':   ["sofrencia sertaneja", "sertanejo sofrencia",
-                        "sertanejo triste", "modao sertanejo",
-                        "sertanejo dor cotovelo", "sertanejo fossa",
-                        "sertanejo sofrimento"],
-        'pagode':      ["pagode triste", "pagode sofrencia",
-                        "pagode saudade", "pagode dor"],
-        'forró':       ["forro triste", "forro sofrencia",
-                        "forro saudade", "forro dor"],
-        'mpb':         ["mpb triste", "mpb melancolica",
-                        "mpb saudade", "mpb acustica triste"],
-        'samba':       ["samba fossa", "samba triste",
-                        "samba saudade", "samba dor"],
-        'axé':         ["axe triste", "axe saudade"],
-        'pop':         ["sad pop", "sad songs",
-                        "heartbreak", "broken heart",
-                        "crying playlist", "musica triste",
-                        "pop triste"],
-        'rock':        ["sad rock",
-                        "rock melancolico", "post rock sad"],
-        'hip hop':     ["sad rap", "emo rap",
-                        "rap triste", "sad trap",
-                        "hip hop triste"],
-        'eletrônica':  ["sad electronic", "dark electronic",
-                        "melancholic beats", "eletronica triste"],
-        'jazz':        ["jazz melancolico", "jazz triste",
-                        "blue jazz", "jazz noir"],
-        'clássica':    ["classical sad", "classical melancholic",
-                        "sad piano", "musica classica triste"],
-        'blues':       ["sad blues", "delta blues",
-                        "blues triste", "blues melancolico"],
-        'reggaeton':   ["reggaeton triste", "reggaeton sad"],
-        'rap':         ["rap triste", "rap depressao",
-                        "rap sad brasileiro", "rap sofrimento"],
+        'funk':       ["funk sad", "funk melody"],
+        'sertanejo':  ["sofrencia", "sertanejo triste", "sertanejo"],
+        'pagode':     ["pagode triste", "samba"],
+        'forró':      ["forro sofrencia", "forro"],
+        'mpb':        ["mpb", "bossa nova"],
+        'samba':      ["samba triste", "mpb"],
+        'axé':        ["axe", "brazilian music"],
+        'pop':        ["sad pop", "heartbreak", "melancholic"],
+        'rock':       ["sad rock", "melancholic", "emo"],
+        'hip hop':    ["sad rap", "emo rap", "melancholic hip-hop"],
+        'eletrônica': ["dark electronic", "melancholic", "ambient"],
+        'jazz':       ["jazz blues", "melancholic jazz"],
+        'clássica':   ["sad classical", "piano"],
+        'blues':      ["blues", "sad blues", "delta blues"],
+        'reggaeton':  ["reggaeton triste", "latin"],
+        'rap':        ["sad rap", "emo rap"],
+        'indie':      ["sad indie", "emo", "melancholic"],
+        'metal':      ["doom metal", "gothic metal"],
+        'country':    ["sad country", "heartbreak country"],
+        'r&b':        ["sad r&b", "soul"],
     },
 }
 
-def get_mood_queries(score, genre_label):
-    """Retorna queries temáticas baseadas no score e gênero."""
-    if score >= 0.7:
-        mood_level = 'alto'
-    elif score >= 0.4:
-        mood_level = 'medio'
-    else:
-        mood_level = 'baixo'
 
-    # Tenta o gênero normalizado
-    queries = MOOD_QUERIES.get(mood_level, {}).get(genre_label, [])
-
-    # Fallback genérico
-    if not queries:
-        fallback = {
-            'alto':  [f"{genre_label} happy", f"{genre_label} party",
-                      f"{genre_label} energy", f"{genre_label} hits",
-                      f"{genre_label} animado", f"{genre_label} festa"],
-            'medio': [f"{genre_label} chill", f"{genre_label} relax",
-                      f"{genre_label} vibes", f"{genre_label} acoustic",
-                      f"{genre_label} romantico"],
-            'baixo': [f"{genre_label} sad", f"{genre_label} triste",
-                      f"{genre_label} emotional", f"{genre_label} sofrencia",
-                      f"{genre_label} melancolico"],
-        }
-        queries = fallback[mood_level]
-
-    return queries
 
 
 # =========================
-# CHAVE ÚNICA (ANTI DUPLICAÇÃO)
+# TAGS DE NOSTALGIA POR GÊNERO
 # =========================
-def track_key(track):
-    """Gera chave única para identificar duplicatas."""
-    try:
-        name = track.get("name", "").lower().strip()
-        artist = track.get("artists", [{}])[0].get("name", "").lower().strip()
-        return f"{name}|{artist}"
-    except:
-        return None
+# Misturadas às tags principais conforme o score de nostalgia.
+NOSTALGIA_TAGS = {
+    'retro': {  # nostalgia > 60 → músicas antigas/clássicas
+        'pop':        ["80s", "90s", "classic pop", "oldies"],
+        'rock':       ["classic rock", "70s rock", "80s rock", "90s rock"],
+        'hip hop':    ["old school hip hop", "90s hip hop", "classic rap"],
+        'eletrônica': ["80s electronic", "synthwave", "retro electronic"],
+        'funk':       ["funk soul", "70s funk", "classic funk"],
+        'sertanejo':  ["sertanejo raiz", "musica caipira", "sertanejo antigo"],
+        'pagode':     ["pagode classico", "samba antigo", "pagode 90s"],
+        'forró':      ["forro pe de serra", "forro antigo", "forro raiz"],
+        'mpb':        ["mpb classica", "bossa nova", "tropicalia"],
+        'samba':      ["samba classico", "bossa nova", "samba antigo"],
+        'axé':        ["axe classico", "axe 90s"],
+        'jazz':       ["classic jazz", "bebop", "jazz standards"],
+        'clássica':   ["baroque", "romantic classical", "classical masterpieces"],
+        'blues':      ["delta blues", "chicago blues", "classic blues"],
+        'reggaeton':  ["reggaeton old school", "latin classic"],
+        'rap':        ["old school rap", "90s rap", "classic hip hop"],
+        'indie':      ["90s indie", "indie classic", "alternative 90s"],
+        'metal':      ["classic metal", "80s metal", "thrash metal"],
+        'country':    ["classic country", "outlaw country", "70s country"],
+        'r&b':        ["classic r&b", "soul", "motown"],
+    },
+    'novo': {  # nostalgia < 40 → músicas recentes
+        'pop':        ["pop 2024", "new pop", "trending pop"],
+        'rock':       ["modern rock", "rock 2024", "new rock"],
+        'hip hop':    ["trap 2024", "new hip hop", "drill"],
+        'eletrônica': ["edm 2024", "future bass", "new electronic"],
+        'funk':       ["funk 2024", "funk brasileiro novo"],
+        'sertanejo':  ["sertanejo 2024", "sertanejo universitario novo"],
+        'pagode':     ["pagode 2024", "pagode novo"],
+        'forró':      ["forro 2024", "piseiro", "forro novo"],
+        'mpb':        ["mpb nova", "mpb 2024"],
+        'samba':      ["samba novo", "pagode novo"],
+        'axé':        ["axe novo", "axe 2024"],
+        'jazz':       ["contemporary jazz", "nu jazz", "jazz fusion"],
+        'clássica':   ["contemporary classical", "modern classical"],
+        'blues':      ["modern blues", "contemporary blues"],
+        'reggaeton':  ["reggaeton 2024", "latin trap"],
+        'rap':        ["rap 2024", "trap brasileiro novo"],
+        'indie':      ["indie 2024", "new indie", "indie pop novo"],
+        'metal':      ["modern metal", "metalcore 2024", "djent"],
+        'country':    ["new country", "country pop 2024"],
+        'r&b':        ["contemporary r&b", "r&b 2024", "alt r&b"],
+    },
+}
 
-
-# =========================
-# BUSCAR TRACKS POR QUERY
-# =========================
-def search_tracks(query, limit=10):
+def get_nostalgia_tags(nostalgia_score, genre_label):
     """
-    Busca tracks diretamente pela API de search.
-    Limite máximo de 10 em development mode do Spotify.
+    nostalgia_score: 0-100
+    > 60 → retro (clássicos)
+    < 40 → novo (lançamentos recentes)
+    40-60 → neutro (sem tags extras)
     """
+    if nostalgia_score > 60:
+        return NOSTALGIA_TAGS['retro'].get(genre_label, [])
+    elif nostalgia_score < 40:
+        return NOSTALGIA_TAGS['novo'].get(genre_label, [])
+    return []  # faixa neutra, não adiciona nada
+
+# =========================
+# LAST.FM: TOP TRACKS POR TAG
+# =========================
+def lastfm_tag_toptracks(tag, limit=50):
+    """Busca as top tracks de uma tag no Last.fm."""
     try:
-        results = sp.search(q=query, type="track", limit=min(limit, 10))
-        tracks = results.get("tracks", {}).get("items", [])
-        print(f"[SEARCH] '{query}' -> {len(tracks)} resultados")
-        return tracks
+        resp = requests.get(LASTFM_BASE, params={
+            "method":  "tag.gettoptracks",
+            "tag":     tag,
+            "api_key": LASTFM_API_KEY,
+            "format":  "json",
+            "limit":   limit,
+        }, timeout=8)
+        resp.raise_for_status()
+        data   = resp.json()
+        tracks = data.get("tracks", {}).get("track", [])
+        print(f"[LASTFM] tag='{tag}' -> {len(tracks)} tracks")
+        return [{"name": t["name"], "artist": t["artist"]["name"]} for t in tracks if t.get("name")]
     except Exception as e:
-        print(f"[SEARCH] Erro ao buscar '{query}': {e}")
+        print(f"[LASTFM] Erro tag='{tag}': {e}")
         return []
 
 
 # =========================
-# COLETA DE MÚSICAS COM MÚLTIPLAS QUERIES
+# SPOTIFY: BUSCAR URI POR NOME+ARTISTA
 # =========================
-def collect_tracks(queries, tracks_per_query=10):
-    """
-    Para cada query, busca tracks e combina.
-    Remove duplicatas pelo track_key.
-    Com limite de 10 por query, usamos múltiplas queries
-    para obter uma boa variedade.
-    """
-    all_tracks = []
-    seen_keys = set()
-
-    for query in queries:
-        tracks = search_tracks(query, limit=tracks_per_query)
-        for t in tracks:
-            if not t:
-                continue
-            key = track_key(t)
-            if key and key not in seen_keys:
-                seen_keys.add(key)
-                all_tracks.append(t)
-
-    return all_tracks
+def spotify_search_track(name, artist):
+    """Busca uma track no Spotify pelo nome+artista vindos do Last.fm."""
+    try:
+        sp = get_sp()
+        # Busca estruturada primeiro
+        results = sp.search(q=f"track:{name} artist:{artist}", type="track", limit=1, market="BR")
+        items   = results.get("tracks", {}).get("items", [])
+        if items:
+            return items[0]
+        # Fallback simples
+        results = sp.search(q=f"{name} {artist}", type="track", limit=1, market="BR")
+        items   = results.get("tracks", {}).get("items", [])
+        return items[0] if items else None
+    except Exception as e:
+        print(f"[SPOTIFY] Erro '{name} - {artist}': {e}")
+        return None
 
 
 # =========================
@@ -279,43 +264,86 @@ def collect_tracks(queries, tracks_per_query=10):
 # =========================
 def get_recommendations(score, genre, data=None):
     """
-    Função principal de recomendação.
-    Usa múltiplas queries temáticas por mood+gênero,
-    busca tracks diretamente pela API de search,
-    e retorna top 10 músicas únicas.
+    Fluxo:
+      1. Score fuzzy → mood (alto/medio/baixo)
+      2. Gênero → tags Last.fm
+      3. Last.fm tag.gettoptracks → nome+artista
+      4. Spotify search → URI + capa para cada track
+      5. Retorna top 10
     """
     genre_label = normalize_genre(genre)
-    score = max(0.0, min(float(score), 1.0))
-    data = data or {}
+    score       = max(0.0, min(float(score), 1.0))
+    mood        = get_mood_level(score)
+    data        = data or {}
 
-    # Gera queries temáticas baseadas no score fuzzy
-    queries = get_mood_queries(score, genre_label)
+    tags      = LASTFM_TAGS.get(mood, {}).get(genre_label, [genre_label])
+    nostalgia = float(data.get('nostalgia', 50))
+    nos_tags  = get_nostalgia_tags(nostalgia, genre_label)
+
+    # Intercala tags de nostalgia com as tags principais
+    # Limita a 4 tags no total para controlar chamadas à API
+    combined_tags = []
+    nos_iter = iter(nos_tags)
+    for i, tag in enumerate(tags):
+        combined_tags.append(tag)
+        if i % 2 == 0:
+            nt = next(nos_iter, None)
+            if nt:
+                combined_tags.append(nt)
+    tags = combined_tags[:4]  # máximo 4 tags → máximo 40 tracks do Last.fm → máximo 15 chamadas Spotify
 
     print(f"\n{'='*50}")
-    print(f"[RECOMENDACAO] Genero: {genre_label} | Score: {score:.2f}")
-    print(f"[RECOMENDACAO] Queries ({len(queries)}): {queries}")
+    print(f"[RECOMENDACAO] Gênero: {genre_label} | Score: {score:.2f} | Mood: {mood} | Nostalgia: {nostalgia:.0f}")
+    print(f"[RECOMENDACAO] Tags Last.fm: {tags}")
     print(f"{'='*50}")
 
-    # Busca com todas as queries
-    all_tracks = collect_tracks(queries, tracks_per_query=10)
+    # Coleta tracks do Last.fm sem duplicatas
+    # Limita a 10 por tag para reduzir chamadas ao Spotify
+    seen_keys     = set()
+    lastfm_tracks = []
 
-    print(f"[TOTAL] {len(all_tracks)} musicas unicas encontradas")
+    for tag in tags:
+        tracks = lastfm_tag_toptracks(tag, limit=10)  # 10 por tag (antes era 50)
+        random.shuffle(tracks)
+        for t in tracks:
+            key = f"{t['name'].lower()}|{t['artist'].lower()}"
+            if key not in seen_keys:
+                seen_keys.add(key)
+                lastfm_tracks.append(t)
 
-    # Fallback: se nenhuma query retornou resultado, tenta query genérica
-    if not all_tracks:
-        print("[FALLBACK] Tentando query generica...")
-        fallback_queries = [genre_label, f"{genre_label} musica", f"{genre_label} hit"]
-        all_tracks = collect_tracks(fallback_queries, tracks_per_query=10)
+    print(f"[LASTFM TOTAL] {len(lastfm_tracks)} tracks únicas")
 
-    # Embaralha para variedade e pega top 10
-    random.shuffle(all_tracks)
-    result = all_tracks[:10]
+    # Fallback se Last.fm não retornou nada
+    if not lastfm_tracks:
+        print("[FALLBACK] Last.fm vazio, buscando direto no Spotify...")
+        try:
+            sp      = get_sp()
+            results = sp.search(q=f"{genre_label} {mood}", type="track", limit=10, market="BR")
+            return results.get("tracks", {}).get("items", [])
+        except Exception as e:
+            print(f"[FALLBACK] Erro: {e}")
+            return []
 
-    print(f"\n[RESULTADO] {len(result)} musicas recomendadas:")
-    for i, t in enumerate(result, 1):
-        artist = t.get('artists', [{}])[0].get('name', '?')
-        print(f"  {i}. {t.get('name', '?')} - {artist}")
+    # Busca no Spotify em batch: monta queries múltiplas num único search
+    # "track:A artist:X OR track:B artist:Y" não é suportado,
+    # então usamos sp.search com q combinado para cada par nome+artista,
+    # mas limitamos a no máximo 15 chamadas com delay entre elas.
+    import time
+    result     = []
+    candidates = lastfm_tracks[:30] # máximo 15 candidatos → máximo 15 chamadas
 
+    for t in candidates:
+        if len(result) >= 20:
+            break
+        spotify_track = spotify_search_track(t["name"], t["artist"])
+        if spotify_track:
+            result.append(spotify_track)
+            print(f"  ✔ {spotify_track['name']} - {spotify_track['artists'][0]['name']}")
+        else:
+            print(f"  ✘ Não encontrado: {t['name']} - {t['artist']}")
+        time.sleep(0.2)  # 200ms entre chamadas evita burst que causa rate limit
+
+    print(f"\n[RESULTADO] {len(result)} músicas")
     return result
 
 
@@ -325,26 +353,20 @@ def get_recommendations(score, genre, data=None):
 def create_playlist(token, track_uris, score, genre):
     headers = {
         "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
+        "Content-Type":  "application/json"
     }
 
     try:
         requests.get("https://api.spotify.com/v1/me", headers=headers).raise_for_status()
 
-        # Nomes temáticos por mood
-        if score >= 0.7:
-            mood_label = "Energia Total 🔥"
-        elif score >= 0.4:
-            mood_label = "Vibes Chill 🌊"
-        else:
-            mood_label = "Sentimentos 💜"
+        mood_label = "Energia Total 🔥" if score >= 0.7 else "Vibes Chill 🌊" if score >= 0.4 else "Sentimentos 💜"
 
         playlist_resp = requests.post(
             "https://api.spotify.com/v1/me/playlists",
             headers=headers,
             json={
-                "name": f"FuzzyMood — {genre.title()} | {mood_label}",
-                "public": True,
+                "name":        f"HarmonAI — {genre.title()} | {mood_label}",
+                "public":      True,
                 "description": f"Playlist gerada pelo sistema fuzzy (score: {round(score * 100)}%)"
             }
         )
