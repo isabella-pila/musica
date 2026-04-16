@@ -1,7 +1,10 @@
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, JsonResponse
 from .fuzzy import compute_fuzzy
-from .spotify_service import get_recommendations, create_playlist, build_sp
+from .spotify_service import (
+    get_recommendations, create_playlist, build_sp,
+    get_popularity_label, get_nostalgia_label
+)
 
 
 from spotipy.oauth2 import SpotifyOAuth
@@ -67,12 +70,22 @@ def result_view(request):
         
         fuzzy_explanation = f"Como você combinou Felicidade de nível {v_level}, Energia num patamar {e_level} e densidade Acústica {a_level}, a lógica fuzzy ponderou as regras e resultou num estilo {defuzz_category} ({defuzz_percentage}%)."
 
+        # Dados de popularidade e nostalgia para o frontend
+        popularity_val   = int(spotify_filters['popularity'])
+        nostalgia_val    = int(spotify_filters['nostalgia'])
+        popularity_label = get_popularity_label(popularity_val)
+        nostalgia_label  = get_nostalgia_label(nostalgia_val)
+
         return render(request, 'result.html', {
             'tracks': tracks,
             'score':  round(score, 3),
             'defuzz_percentage': defuzz_percentage,
             'defuzz_category': defuzz_category,
-            'fuzzy_explanation': fuzzy_explanation
+            'fuzzy_explanation': fuzzy_explanation,
+            'popularity_val': popularity_val,
+            'popularity_label': popularity_label,
+            'nostalgia_val': nostalgia_val,
+            'nostalgia_label': nostalgia_label,
         })
 
     return redirect('index')

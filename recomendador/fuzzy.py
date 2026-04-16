@@ -8,7 +8,7 @@ energy       = ctrl.Antecedent(np.arange(0, 1.01, 0.01), 'energy')
 acousticness = ctrl.Antecedent(np.arange(0, 1.01, 0.01), 'acousticness')
 
 playlist_score = ctrl.Consequent(np.arange(0, 1.01, 0.01), 'playlist_score')
-
+#socorro
 # Memberships — entradas
 valence['triste'] = fuzz.trimf(valence.universe, [0, 0, 0.45])
 valence['neutra'] = fuzz.trimf(valence.universe, [0.35, 0.5, 0.65])

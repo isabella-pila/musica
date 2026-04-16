@@ -23,6 +23,35 @@
   <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin: 0;">{{ fuzzy_explanation }}</p>
 </div>
 
+<div class="card filters-card" style="margin-bottom: 1.5rem; text-align: left; padding: 1.8rem 2rem;">
+  <h4 style="margin-bottom: 1.2rem; font-size: 1.15rem;">📊 Filtros Aplicados</h4>
+
+  <div class="filter-row">
+    <div class="filter-header">
+      <span class="filter-icon">🔥</span>
+      <span class="filter-name">Popularidade</span>
+      <span class="filter-percent filter-percent--pop">{{ popularity_val }}%</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill progress-bar-fill--pop" style="width: {{ popularity_val }}%;"></div>
+    </div>
+    <span class="filter-label filter-label--pop">{{ popularity_label }}</span>
+  </div>
+
+  <div class="filter-row" style="margin-top: 1.2rem;">
+    <div class="filter-header">
+      <span class="filter-icon">⏳</span>
+      <span class="filter-name">Nostalgia</span>
+      <span class="filter-percent filter-percent--nos">{{ nostalgia_val }}%</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill progress-bar-fill--nos" style="width: {{ nostalgia_val }}%;"></div>
+    </div>
+    <span class="filter-label filter-label--nos">{{ nostalgia_label }}</span>
+  </div>
+</div>
+
+
 {% if tracks %}
 <div class="card" style="margin-bottom: 1.5rem; text-align: left;">
   <h3 style="margin-bottom: 1rem;">Músicas Recomendadas</h3>
