@@ -62,24 +62,23 @@ rules = [
     # CATEGORIA 4: VIBES ESPECÍFICAS
    
     ctrl.Rule(valence['feliz']  & energy['agitada']  & acousticness['eletronica'], playlist_score['muito_alta']),
-    
     ctrl.Rule(valence['triste'] & energy['agitada']  & acousticness['eletronica'], playlist_score['baixa']),
-    # Sofrência
     ctrl.Rule(valence['triste'] & energy['calma']    & acousticness['acustica'],   playlist_score['muito_baixa']),
-    # Bossa Noa / Chill
     ctrl.Rule(valence['feliz']  & energy['calma']    & acousticness['acustica'],   playlist_score['media']),
-    # Lo-fi / Study
     ctrl.Rule(valence['neutra'] & energy['calma']    & acousticness['eletronica'], playlist_score['media']),
-    # Folk animado
     ctrl.Rule(valence['feliz']  & energy['moderada'] & acousticness['acustica'],   playlist_score['alta']),
-    # Indie alternativo
     ctrl.Rule(valence['neutra'] & energy['agitada']  & acousticness['mista'],      playlist_score['alta']),
 
     # CATEGORIA 5: FALLBACKS
     ctrl.Rule(energy['agitada'],   playlist_score['alta']),
     ctrl.Rule(energy['calma'],     playlist_score['baixa']),
+    ctrl.Rule(energy['moderada'],  playlist_score['media']),
     ctrl.Rule(valence['feliz'],    playlist_score['alta']),
     ctrl.Rule(valence['triste'],   playlist_score['muito_baixa']),
+    ctrl.Rule(valence['neutra'],   playlist_score['media']),
+    ctrl.Rule(acousticness['eletronica'], playlist_score['alta']),
+    ctrl.Rule(acousticness['acustica'],   playlist_score['baixa']),
+    ctrl.Rule(acousticness['mista'],      playlist_score['media']),
 ]
 
 system    = ctrl.ControlSystem(rules)

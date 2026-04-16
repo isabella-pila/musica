@@ -3,7 +3,6 @@ from django.http import HttpResponse, JsonResponse
 from .fuzzy import compute_fuzzy
 from .spotify_service import (
     get_recommendations, create_playlist, build_sp,
-    get_popularity_label, get_nostalgia_label
 )
 
 
@@ -43,15 +42,10 @@ def result_view(request):
             'acousticness': float(request.POST.get('acousticness')),
         }
 
-        spotify_filters = {
-            'popularity': float(request.POST.get('popularity', 50)),
-            'nostalgia':  float(request.POST.get('nostalgia', 50)),
-        }
-
         genre = request.POST.get('genre')
         score = compute_fuzzy(fuzzy_inputs)
 
-        tracks = get_recommendations(score, genre, spotify_filters)
+        tracks = get_recommendations(score, genre)
 
         request.session['tracks'] = [t['uri'] for t in tracks if t.get('uri')]
         request.session['score']  = score
@@ -67,14 +61,8 @@ def result_view(request):
         v_level = "Alto" if fuzzy_inputs['valence'] >= 0.55 else "Baixo" if fuzzy_inputs['valence'] <= 0.45 else "Médio"
         e_level = "Alto" if fuzzy_inputs['energy'] >= 0.55 else "Baixo" if fuzzy_inputs['energy'] <= 0.45 else "Médio"
         a_level = "Alta" if fuzzy_inputs['acousticness'] >= 0.55 else "Baixa" if fuzzy_inputs['acousticness'] <= 0.45 else "Média"
-        
-        fuzzy_explanation = f"Como você combinou Felicidade de nível {v_level}, Energia num patamar {e_level} e densidade Acústica {a_level}, a lógica fuzzy ponderou as regras e resultou num estilo {defuzz_category} ({defuzz_percentage}%)."
 
-        # Dados de popularidade e nostalgia para o frontend
-        popularity_val   = int(spotify_filters['popularity'])
-        nostalgia_val    = int(spotify_filters['nostalgia'])
-        popularity_label = get_popularity_label(popularity_val)
-        nostalgia_label  = get_nostalgia_label(nostalgia_val)
+        fuzzy_explanation = f"Como você combinou Felicidade de nível {v_level}, Energia num patamar {e_level} e densidade Acústica {a_level}, a lógica fuzzy ponderou as regras e resultou num estilo {defuzz_category} ({defuzz_percentage}%)."
 
         return render(request, 'result.html', {
             'tracks': tracks,
@@ -82,10 +70,6 @@ def result_view(request):
             'defuzz_percentage': defuzz_percentage,
             'defuzz_category': defuzz_category,
             'fuzzy_explanation': fuzzy_explanation,
-            'popularity_val': popularity_val,
-            'popularity_label': popularity_label,
-            'nostalgia_val': nostalgia_val,
-            'nostalgia_label': nostalgia_label,
         })
 
     return redirect('index')
@@ -115,9 +99,6 @@ def callback(request):
 
     request.session['token_info'] = token_info
 
-    # Fluxo normal: criar playlist com tracks já salvos
-
-    # Fluxo normal: criar playlist com tracks já salvos
     track_uris = request.session.get('tracks', [])
     score      = request.session.get('score', 0.5)
     genre      = request.session.get('genre', 'pop')

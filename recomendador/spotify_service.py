@@ -40,35 +40,19 @@ def get_sp():
 LASTFM_API_KEY = settings.LASTFM_API_KEY
 LASTFM_BASE    = "https://ws.audioscrobbler.com/2.0/"
 
+# Sempre busca a página 1 do Last.fm = as mais escutadas/populares do gênero
+LASTFM_PAGE = 1
+
 
 # =========================
 # MAPEAMENTO GENERO
 # =========================
 GENRE_SEED_MAP = {
-    "funk":       "funk",
-    "sertanejo":  "sertanejo",
-    "pagode":     "pagode",
-    "forro":      "forro",
-    "mpb":        "mpb",
-    "samba":      "samba",
-    "axe":        "axe",
-    "rock":       "rock",
-    "pop":        "pop",
-    "hip-hop":    "hip hop",
-    "hip hop":    "hip hop",
-    "rap":        "rap",
-    "electronic": "eletronica",
-    "eletronica": "eletronica",
-    "edm":        "eletronica",
-    "jazz":       "jazz",
-    "classical":  "classica",
-    "classica":   "classica",
-    "blues":      "blues",
-    "reggaeton":  "reggaeton",
-    "r&b":        "rnb",
-    "indie":      "indie",
-    "metal":      "metal",
-    "country":    "country",
+    "funk":      "funk",
+    "sertanejo": "sertanejo",
+    "mpb":       "mpb",
+    "pop":       "pop",
+    "rock":      "rock",
 }
 
 def normalize_genre(genre):
@@ -85,80 +69,63 @@ def get_mood_level(score):
 
 
 # =========================
-# LABELS PARA FRONTEND
-# =========================
-def get_popularity_label(value):
-    """Retorna label descritivo para o nivel de popularidade (0-100)."""
-    if value >= 75:
-        return "Viral / Famosa"
-    elif value >= 50:
-        return "Popular"
-    elif value >= 25:
-        return "Moderada"
-    return "Underground"
-
-def get_nostalgia_label(value):
-    """Retorna label descritivo para o nivel de nostalgia (0-100)."""
-    if value >= 75:
-        return "Classicos"
-    elif value >= 50:
-        return "Retro"
-    elif value >= 25:
-        return "Mix"
-    return "Lancamentos"
-
-
-# =========================
-# ARTISTAS CONHECIDOS POR GENERO (FALLBACK CONFIAVEL)
+# ARTISTAS CONHECIDOS POR GENERO — MOOD NORMAL/ALTO
 # =========================
 GENRE_ARTISTS = {
-    'funk':       ["MC Kevin o Chris", "Anitta", "Pedro Sampaio", "MC Livinho", "Ludmilla", "MC Don Juan", "Dennis DJ", "MC Kevinho", "Mc Cabelinho", "Mc Hariel"],
-    'sertanejo':  ["Gusttavo Lima", "Jorge & Mateus", "Henrique e Juliano", "Maiara e Maraisa", "Luan Santana", "Leonardo", "Simone Mendes", "Zeze Di Camargo & Luciano"],
-    'pagode':     ["Thiaguinho", "Grupo Revelacao", "Pericles", "Sorriso Maroto", "Ferrugem", "Dilsinho", "Turma do Pagode", "Menos E Mais", "Belo", "Alexandre Pires"],
-    'forro':      ["Luiz Gonzaga", "Wesley Safadao", "Xand Aviao", "Falamansa", "Calcinha Preta", "Joao Gomes", "Ze Vaqueiro", "Mari Fernandez"],
-    'mpb':        ["Caetano Veloso", "Gilberto Gil", "Djavan", "Maria Bethania", "Marisa Monte", "Chico Buarque", "Tim Maia", "Elis Regina", "Jorge Ben Jor", "Gal Costa"],
-    'samba':      ["Beth Carvalho", "Zeca Pagodinho", "Martinho da Vila", "Clara Nunes", "Paulinho da Viola", "Jorge Aragao", "Alcione", "Arlindo Cruz", "Cartola", "Fundo de Quintal"],
-    'axe':        ["Ivete Sangalo", "Claudia Leitte", "Bell Marques", "Chiclete com Banana", "Daniela Mercury", "Olodum", "Timbalada", "Banda Eva"],
-    'pop':        ["Taylor Swift", "The Weeknd", "Dua Lipa", "Harry Styles", "Billie Eilish", "Ed Sheeran", "Ariana Grande", "Bruno Mars", "Adele", "Lady Gaga"],
-    'rock':       ["Foo Fighters", "Arctic Monkeys", "Red Hot Chili Peppers", "Nirvana", "Queen", "The Beatles", "Pink Floyd", "AC/DC", "Led Zeppelin", "Imagine Dragons"],
-    'hip hop':    ["Kendrick Lamar", "Drake", "Travis Scott", "Kanye West", "J. Cole", "Tyler, The Creator", "Post Malone", "21 Savage", "Eminem", "Jay-Z"],
-    'eletronica': ["David Guetta", "Calvin Harris", "Marshmello", "Martin Garrix", "Alok", "Vintage Culture", "Daft Punk", "Skrillex", "Deadmau5"],
-    'jazz':       ["Miles Davis", "John Coltrane", "Bill Evans", "Thelonious Monk", "Charlie Parker", "Duke Ellington", "Louis Armstrong", "Nina Simone", "Herbie Hancock", "Chet Baker"],
-    'classica':   ["Ludwig van Beethoven", "Wolfgang Amadeus Mozart", "Johann Sebastian Bach", "Frederic Chopin", "Antonio Vivaldi", "Claude Debussy", "Franz Schubert"],
-    'blues':      ["B.B. King", "Muddy Waters", "Robert Johnson", "Stevie Ray Vaughan", "John Lee Hooker", "Eric Clapton", "Buddy Guy"],
-    'reggaeton':  ["Bad Bunny", "J Balvin", "Daddy Yankee", "Ozuna", "Maluma", "Rauw Alejandro", "Karol G"],
-    'rap':        ["Emicida", "Djonga", "Filipe Ret", "Matue", "Xama", "L7nnon", "Costa Gold", "Criolo"],
-    'indie':      ["Arctic Monkeys", "Tame Impala", "Mac DeMarco", "Radiohead", "The Strokes", "Vampire Weekend", "Beach House", "Bon Iver"],
-    'metal':      ["Metallica", "Iron Maiden", "Black Sabbath", "Slayer", "Megadeth", "Judas Priest", "Pantera", "Sepultura"],
-    'country':    ["Morgan Wallen", "Luke Combs", "Chris Stapleton", "Zach Bryan", "Luke Bryan", "Carrie Underwood", "Blake Shelton", "Kenny Chesney"],
-    'rnb':        ["The Weeknd", "SZA", "Frank Ocean", "Daniel Caesar", "H.E.R.", "Chris Brown", "Usher"],
+    'funk':      ["MC Kevin o Chris", "Anitta", "Pedro Sampaio", "MC Livinho", "Ludmilla", "MC Don Juan", "Dennis DJ", "MC Kevinho", "Mc Cabelinho", "Mc Hariel"],
+    'sertanejo': ["Gusttavo Lima", "Jorge & Mateus", "Henrique e Juliano", "Maiara e Maraisa", "Luan Santana", "Leonardo", "Simone Mendes", "Zeze Di Camargo & Luciano"],
+    'mpb':       ["Caetano Veloso", "Gilberto Gil", "Djavan", "Maria Bethania", "Marisa Monte", "Chico Buarque", "Tim Maia", "Elis Regina", "Jorge Ben Jor", "Gal Costa"],
+    'pop':       ["Taylor Swift", "The Weeknd", "Dua Lipa", "Harry Styles", "Billie Eilish", "Ed Sheeran", "Ariana Grande", "Bruno Mars", "Adele", "Lady Gaga"],
+    'rock':      ["Foo Fighters", "Arctic Monkeys", "Red Hot Chili Peppers", "Nirvana", "Queen", "The Beatles", "Pink Floyd", "AC/DC", "Led Zeppelin", "Imagine Dragons"],
+}
+
+# =========================
+# ARTISTAS CONHECIDOS POR GENERO — MOOD BAIXO (TRISTE)
+# =========================
+GENRE_ARTISTS_SAD = {
+    'funk':      ["MC Cabelinho", "Mc Hariel", "MC Livinho"],
+    'sertanejo': ["Leonardo", "Zeze Di Camargo & Luciano", "Luan Santana", "Gusttavo Lima", "Maiara e Maraisa"],
+    'mpb':       ["Chico Buarque", "Caetano Veloso", "Maria Bethania", "Elis Regina", "Marisa Monte"],
+    'pop':       ["Adele", "Billie Eilish", "Lewis Capaldi", "Lana Del Rey", "The Weeknd", "James Arthur"],
+    'rock':      ["Nirvana", "Radiohead", "Pearl Jam", "The Cure", "Coldplay", "Pink Floyd"],
+}
+
+# =========================
+# ARTISTAS PROIBIDOS POR GENERO
+# Artistas que o Last.fm frequentemente associa a tags de outros gêneros
+# e que nunca devem aparecer em determinado gênero
+# =========================
+GENRE_BLOCKED_ARTISTS = {
+    'rock':      ["harry styles", "taylor swift", "dua lipa", "ariana grande", "billie eilish",
+                  "ed sheeran", "bruno mars", "adele", "lady gaga", "the weeknd",
+                  "katy perry", "selena gomez", "justin bieber", "miley cyrus", "olivia rodrigo"],
+    'pop':       [],
+    'funk':      [],
+    'sertanejo': [],
+    'mpb':       [],
 }
 
 
 # =========================
-# QUERY SPOTIFY POR GENERO (para busca direta no Spotify)
+# QUERY SPOTIFY POR GENERO — MOOD NORMAL/ALTO
 # =========================
 GENRE_SPOTIFY_QUERY = {
-    'funk':       "funk brasileiro",
-    'sertanejo':  "sertanejo",
-    'pagode':     "pagode",
-    'forro':      "forro",
-    'mpb':        "mpb",
-    'samba':      "samba",
-    'axe':        "axe bahia",
-    'pop':        "pop",
-    'rock':       "rock",
-    'hip hop':    "hip hop",
-    'eletronica': "electronic dance",
-    'jazz':       "jazz",
-    'classica':   "classical",
-    'blues':      "blues",
-    'reggaeton':  "reggaeton",
-    'rap':        "rap brasileiro",
-    'indie':      "indie",
-    'metal':      "metal",
-    'country':    "country",
-    'rnb':        "r&b",
+    'funk':      "funk",
+    'sertanejo': "sertanejo",
+    'mpb':       "mpb",
+    'pop':       "pop",
+    'rock':      "rock",
+}
+
+# =========================
+# QUERY SPOTIFY POR GENERO — MOOD BAIXO (TRISTE)
+# =========================
+GENRE_SPOTIFY_QUERY_SAD = {
+    'funk':      "funk triste",
+    'sertanejo': "sertanejo sofrencia triste",
+    'mpb':       "mpb melancolia",
+    'pop':       "sad pop heartbreak",
+    'rock':      "sad rock",
 }
 
 
@@ -167,157 +134,54 @@ GENRE_SPOTIFY_QUERY = {
 # =========================
 LASTFM_TAGS = {
     'alto': {
-        'funk':       ["baile funk", "funk carioca", "funk brasileiro"],
-        'sertanejo':  ["sertanejo", "sertanejo universitario", "forro"],
-        'pagode':     ["pagode", "samba", "brazilian music"],
-        'forro':      ["forro", "sertanejo", "brazilian music"],
-        'mpb':        ["mpb", "bossa nova", "brazilian music"],
-        'samba':      ["samba", "pagode", "brazilian music"],
-        'axe':        ["axe", "brazilian music"],
-        'pop':        ["pop", "dance pop", "feel good"],
-        'rock':       ["rock", "classic rock", "alternative rock"],
-        'hip hop':    ["hip-hop", "rap", "trap"],
-        'eletronica': ["electronic", "edm", "dance"],
-        'jazz':       ["jazz", "swing", "big band"],
-        'classica':   ["classical", "orchestra", "piano"],
-        'blues':      ["blues", "blues rock"],
-        'reggaeton':  ["reggaeton", "latin"],
-        'rap':        ["rap", "hip-hop", "trap"],
-        'indie':      ["indie pop", "indie rock"],
-        'metal':      ["metal", "heavy metal"],
-        'country':    ["country", "country pop"],
-        'rnb':        ["rnb", "r&b", "soul"],
+        'funk':      ["baile funk", "funk carioca", "funk brasileiro"],
+        'sertanejo': ["sertanejo", "sertanejo universitario", "forro"],
+        'mpb':       ["mpb", "bossa nova", "brazilian music"],
+        'pop':       ["pop", "dance pop", "feel good"],
+        'rock':      ["rock", "classic rock", "alternative rock"],
     },
     'medio': {
-        'funk':       ["funk melody", "funk"],
-        'sertanejo':  ["sertanejo romantico", "sertanejo"],
-        'pagode':     ["pagode romantico", "pagode"],
-        'forro':      ["forro romantico", "forro"],
-        'mpb':        ["mpb", "bossa nova"],
-        'samba':      ["bossa nova", "samba jazz"],
-        'axe':        ["axe", "brazilian music"],
-        'pop':        ["pop", "indie pop", "acoustic pop"],
-        'rock':       ["soft rock", "indie rock", "acoustic"],
-        'hip hop':    ["lo-fi hip hop", "chill hop"],
-        'eletronica': ["chillwave", "ambient", "lo-fi"],
-        'jazz':       ["smooth jazz", "jazz"],
-        'classica':   ["classical", "piano"],
-        'blues':      ["blues", "slow blues"],
-        'reggaeton':  ["reggaeton romantico", "latin"],
-        'rap':        ["rap", "hip-hop"],
-        'indie':      ["indie", "dream pop"],
-        'metal':      ["progressive metal"],
-        'country':    ["country", "acoustic country"],
-        'rnb':        ["rnb", "r&b", "soul", "neo soul"],
+        'funk':      ["funk melody", "funk"],
+        'sertanejo': ["sertanejo romantico", "sertanejo"],
+        'mpb':       ["mpb", "bossa nova"],
+        'pop':       ["pop", "indie pop", "acoustic pop"],
+        'rock':      ["rock", "indie rock"],
     },
     'baixo': {
-        'funk':       ["funk sad", "funk melody"],
-        'sertanejo':  ["sofrencia", "sertanejo triste", "sertanejo"],
-        'pagode':     ["pagode triste", "samba"],
-        'forro':      ["forro sofrencia", "forro"],
-        'mpb':        ["mpb", "bossa nova"],
-        'samba':      ["samba triste", "mpb"],
-        'axe':        ["axe", "brazilian music"],
-        'pop':        ["sad pop", "heartbreak", "melancholic"],
-        'rock':       ["sad rock", "melancholic", "emo"],
-        'hip hop':    ["sad rap", "emo rap", "melancholic hip-hop"],
-        'eletronica': ["dark electronic", "melancholic", "ambient"],
-        'jazz':       ["jazz blues", "melancholic jazz"],
-        'classica':   ["sad classical", "piano"],
-        'blues':      ["blues", "sad blues", "delta blues"],
-        'reggaeton':  ["reggaeton triste", "latin"],
-        'rap':        ["sad rap", "emo rap"],
-        'indie':      ["sad indie", "emo", "melancholic"],
-        'metal':      ["doom metal", "gothic metal"],
-        'country':    ["sad country", "heartbreak country"],
-        'rnb':        ["sad r&b", "soul"],
+        'funk':      ["funk sofrencia"],
+        'sertanejo': ["sofrencia", "sertanejo"],
+        'mpb':       ["mpb", "bossa nova"],
+        'pop':       ["sad pop", "indie pop", "pop"],
+        'rock':      ["sad rock", "emo", "rock"],
     },
 }
 
 
 # =========================
-# TAGS DE NOSTALGIA POR GENERO
+# VALIDACAO DE GENERO
+# Bloqueia artistas que não pertencem ao gênero solicitado
 # =========================
-NOSTALGIA_TAGS = {
-    'retro': {
-        'pop':        ["80s", "90s", "classic pop", "oldies"],
-        'rock':       ["classic rock", "70s rock", "80s rock", "90s rock"],
-        'hip hop':    ["old school hip hop", "90s hip hop", "classic rap"],
-        'eletronica': ["80s electronic", "synthwave", "retro electronic"],
-        'funk':       ["funk soul", "70s funk", "classic funk"],
-        'sertanejo':  ["sertanejo raiz", "musica caipira", "sertanejo antigo"],
-        'pagode':     ["pagode classico", "samba antigo", "pagode 90s"],
-        'forro':      ["forro pe de serra", "forro antigo", "forro raiz"],
-        'mpb':        ["mpb classica", "bossa nova", "tropicalia"],
-        'samba':      ["samba classico", "bossa nova", "samba antigo"],
-        'axe':        ["axe classico", "axe 90s"],
-        'jazz':       ["classic jazz", "bebop", "jazz standards"],
-        'classica':   ["baroque", "romantic classical", "classical masterpieces"],
-        'blues':      ["delta blues", "chicago blues", "classic blues"],
-        'reggaeton':  ["reggaeton old school", "latin classic"],
-        'rap':        ["old school rap", "90s rap", "classic hip hop"],
-        'indie':      ["90s indie", "indie classic", "alternative 90s"],
-        'metal':      ["classic metal", "80s metal", "thrash metal"],
-        'country':    ["classic country", "outlaw country", "70s country"],
-        'rnb':        ["classic r&b", "soul", "motown"],
-    },
-    'novo': {
-        'pop':        ["pop 2024", "new pop", "trending pop"],
-        'rock':       ["modern rock", "rock 2024", "new rock"],
-        'hip hop':    ["trap 2024", "new hip hop", "drill"],
-        'eletronica': ["edm 2024", "future bass", "new electronic"],
-        'funk':       ["funk 2024", "funk brasileiro novo"],
-        'sertanejo':  ["sertanejo 2024", "sertanejo universitario novo"],
-        'pagode':     ["pagode 2024", "pagode novo"],
-        'forro':      ["forro 2024", "piseiro", "forro novo"],
-        'mpb':        ["mpb nova", "mpb 2024"],
-        'samba':      ["samba novo", "pagode novo"],
-        'axe':        ["axe novo", "axe 2024"],
-        'jazz':       ["contemporary jazz", "nu jazz", "jazz fusion"],
-        'classica':   ["contemporary classical", "modern classical"],
-        'blues':      ["modern blues", "contemporary blues"],
-        'reggaeton':  ["reggaeton 2024", "latin trap"],
-        'rap':        ["rap 2024", "trap brasileiro novo"],
-        'indie':      ["indie 2024", "new indie", "indie pop novo"],
-        'metal':      ["modern metal", "metalcore 2024", "djent"],
-        'country':    ["new country", "country pop 2024"],
-        'rnb':        ["contemporary r&b", "r&b 2024", "alt r&b"],
-    },
-}
-
-def get_nostalgia_tags(nostalgia_score, genre_label):
+def track_matches_genre(spotify_track, genre_label):
     """
-    nostalgia_score: 0-100
-    > 60 = retro (classicos)
-    < 40 = novo (lancamentos recentes)
-    40-60 = neutro (sem tags extras)
+    Retorna False se algum artista da track estiver na lista de bloqueados do gênero.
+    Retorna True caso contrário (deixa passar).
     """
-    if nostalgia_score > 60:
-        return NOSTALGIA_TAGS['retro'].get(genre_label, [])
-    elif nostalgia_score < 40:
-        return NOSTALGIA_TAGS['novo'].get(genre_label, [])
-    return []
+    blocked = GENRE_BLOCKED_ARTISTS.get(genre_label, [])
+    if not blocked:
+        return True
 
-
-# =========================
-# POPULARIDADE -> PAGINA DO LAST.FM
-# =========================
-def get_lastfm_page_for_popularity(popularity):
-    """Mapeia o slider de popularidade (0-100) para a pagina do ranking Last.fm."""
-    if popularity >= 75:
-        return 1
-    elif popularity >= 50:
-        return 2
-    elif popularity >= 25:
-        return 3
-    else:
-        return 5
+    track_artists = [a['name'].lower() for a in spotify_track.get('artists', [])]
+    for ta in track_artists:
+        if ta in blocked:
+            safe_print(f"  [BLOCK] '{spotify_track['name']}' de '{ta}' bloqueado para genero '{genre_label}'")
+            return False
+    return True
 
 
 # =========================
 # LAST.FM: TOP TRACKS POR TAG
 # =========================
-def lastfm_tag_toptracks(tag, limit=50, page=1):
+def lastfm_tag_toptracks(tag, limit=50, page=LASTFM_PAGE):
     """Busca as top tracks de uma tag no Last.fm."""
     try:
         resp = requests.get(LASTFM_BASE, params={
@@ -370,7 +234,7 @@ def lastfm_artist_toptracks(artist_name, limit=10):
 # =========================
 # LAST.FM: TOP ARTISTS POR TAG
 # =========================
-def lastfm_tag_topartists(tag, limit=10, page=1):
+def lastfm_tag_topartists(tag, limit=10, page=LASTFM_PAGE):
     """Busca os top artistas de uma tag no Last.fm."""
     try:
         resp = requests.get(LASTFM_BASE, params={
@@ -444,13 +308,18 @@ def spotify_search_track(name, artist):
 # SPOTIFY: BUSCAR TRACKS POR GENERO (FALLBACK)
 # =========================
 def spotify_search_genre(genre_label, mood, limit=10):
-    """Busca tracks diretamente no Spotify pelo genero traduzido."""
+    """Busca tracks diretamente no Spotify pelo genero+mood."""
     try:
         sp = get_sp()
-        query = GENRE_SPOTIFY_QUERY.get(genre_label, genre_label)
-        results = sp.search(q=f"genre:{query}", type="track", limit=limit, market="BR")
+        genre_query = GENRE_SPOTIFY_QUERY.get(genre_label, genre_label)
+        if mood == 'baixo':
+            sad_query = GENRE_SPOTIFY_QUERY_SAD.get(genre_label, genre_label)
+            q = f'genre:"{genre_query}" {sad_query}'
+        else:
+            q = f'genre:"{genre_query}"'
+        results = sp.search(q=q, type="track", limit=limit, market="BR")
         items = results.get("tracks", {}).get("items", [])
-        print(f"[SPOTIFY GENRE] query='genre:{query}' -> {len(items)} tracks")
+        print(f"[SPOTIFY GENRE] query='{q}' -> {len(items)} tracks")
         return items
     except Exception as e:
         print(f"[SPOTIFY GENRE] Erro: {e}")
@@ -458,127 +327,98 @@ def spotify_search_genre(genre_label, mood, limit=10):
 
 
 # =========================
-# FILTRO DE NOSTALGIA POR ANO
-# =========================
-def passes_nostalgia_filter(spotify_track, nostalgia_score):
-    """Filtra tracks do Spotify pela data de lancamento baseado no score de nostalgia."""
-    if 40 <= nostalgia_score <= 60:
-        return True
-
-    try:
-        release_date = spotify_track.get("album", {}).get("release_date", "")
-        if not release_date:
-            return True
-        year = int(release_date[:4])
-    except (ValueError, IndexError):
-        return True
-
-    if nostalgia_score > 60:
-        return year <= 2015
-    elif nostalgia_score < 40:
-        return year >= 2018
-
-    return True
-
-
-# =========================
 # RECOMENDACAO PRINCIPAL
 # =========================
 def get_recommendations(score, genre, data=None):
     """
-    Fluxo com 3 camadas para garantir musicas do genero correto:
-    
+    Fluxo com 3 camadas para garantir musicas do genero correto.
+    Sempre retorna as mais populares/escutadas (LASTFM_PAGE = 1).
+    Aplica filtro de artistas bloqueados para evitar vazamento de gênero.
+
       CAMADA 1: Last.fm tag.gettoptracks (tags de mood+genero)
-      CAMADA 2: Last.fm artist.gettoptracks (artistas conhecidos do genero)
-      CAMADA 3: Spotify search por genero (fallback final)
+      CAMADA 2: Last.fm artist.gettoptracks (artistas do genero filtrados por mood)
+      CAMADA 3: Spotify search por genero+mood (fallback final)
     """
     genre_label = normalize_genre(genre)
     score       = max(0.0, min(float(score), 1.0))
     mood        = get_mood_level(score)
-    data        = data or {}
 
-    popularity = float(data.get('popularity', 50))
-    nostalgia  = float(data.get('nostalgia', 50))
-
-    # Tags base do mood
-    mood_tags = LASTFM_TAGS.get(mood, {}).get(genre_label, [genre_label])
-
-    # Tags de nostalgia (complementares)
-    nos_tags = get_nostalgia_tags(nostalgia, genre_label)
-
-    # Combinar tags: priorizar mood, depois 1 tag de nostalgia
-    combined_tags = list(mood_tags)
-    if nos_tags:
-        combined_tags.append(nos_tags[0])
-    tags = combined_tags[:4]
-
-    # Pagina do Last.fm baseada na popularidade
-    lastfm_page = get_lastfm_page_for_popularity(popularity)
+    known_artists = GENRE_ARTISTS_SAD.get(genre_label, []) if mood == 'baixo' else GENRE_ARTISTS.get(genre_label, [])
+    tags = LASTFM_TAGS.get(mood, {}).get(genre_label, [genre_label])[:4]
 
     print(f"\n{'='*60}")
     print(f"[RECOMENDACAO] Genero: {genre_label} | Score: {score:.2f} | Mood: {mood}")
-    print(f"[RECOMENDACAO] Popularidade: {popularity:.0f}% ({get_popularity_label(popularity)}) -> page={lastfm_page}")
-    print(f"[RECOMENDACAO] Nostalgia: {nostalgia:.0f}% ({get_nostalgia_label(nostalgia)})")
+    print(f"[RECOMENDACAO] Popularidade: maxima (page={LASTFM_PAGE})")
     print(f"[RECOMENDACAO] Tags Last.fm: {tags}")
+    print(f"[RECOMENDACAO] Artistas base: {known_artists}")
     print(f"{'='*60}")
 
     seen_keys     = set()
     lastfm_tracks = []
 
     # ========================================
-    # CAMADA 1: Last.fm tag.gettoptracks
+    # Para mood baixo: Camada 2 PRIMEIRO
     # ========================================
-    print(f"\n--- CAMADA 1: tag.gettoptracks ---")
-    for tag in tags:
-        tracks = lastfm_tag_toptracks(tag, limit=20, page=lastfm_page)
-        for t in tracks:
-            key = f"{t['name'].lower()}|{t['artist'].lower()}"
-            if key not in seen_keys:
-                seen_keys.add(key)
-                lastfm_tracks.append(t)
+    if mood == 'baixo':
+        print(f"\n--- CAMADA 2 (prioritaria para mood baixo): artist.gettoptracks ---")
+        for artist_name in known_artists[:6]:
+            tracks = lastfm_artist_toptracks(artist_name, limit=5)
+            for t in tracks:
+                key = f"{t['name'].lower()}|{t['artist'].lower()}"
+                if key not in seen_keys:
+                    seen_keys.add(key)
+                    lastfm_tracks.append(t)
+        print(f"[CAMADA 2] {len(lastfm_tracks)} tracks dos artistas sad do genero")
 
-    print(f"[CAMADA 1] {len(lastfm_tracks)} tracks das tags")
+        print(f"\n--- CAMADA 1: tag.gettoptracks (complemento) ---")
+        for tag in tags:
+            tracks = lastfm_tag_toptracks(tag, limit=10)
+            for t in tracks:
+                key = f"{t['name'].lower()}|{t['artist'].lower()}"
+                if key not in seen_keys:
+                    seen_keys.add(key)
+                    lastfm_tracks.append(t)
+        print(f"[CAMADA 1] Total acumulado: {len(lastfm_tracks)} tracks")
+
+    else:
+        # ========================================
+        # Para alto/medio: Camada 1 primeiro, depois Camada 2
+        # ========================================
+        print(f"\n--- CAMADA 1: tag.gettoptracks ---")
+        for tag in tags:
+            tracks = lastfm_tag_toptracks(tag, limit=20)
+            for t in tracks:
+                key = f"{t['name'].lower()}|{t['artist'].lower()}"
+                if key not in seen_keys:
+                    seen_keys.add(key)
+                    lastfm_tracks.append(t)
+        print(f"[CAMADA 1] {len(lastfm_tracks)} tracks das tags")
+
+        print(f"\n--- CAMADA 2: artist.gettoptracks ---")
+        primary_tag = tags[0] if tags else genre_label
+        genre_artists_from_lastfm = lastfm_tag_topartists(primary_tag, limit=8)
+        all_genre_artists = []
+        seen_artists = set()
+        for a in genre_artists_from_lastfm + known_artists:
+            a_lower = a.lower()
+            if a_lower not in seen_artists:
+                seen_artists.add(a_lower)
+                all_genre_artists.append(a)
+        for artist_name in all_genre_artists[:6]:
+            tracks = lastfm_artist_toptracks(artist_name, limit=5)
+            for t in tracks:
+                key = f"{t['name'].lower()}|{t['artist'].lower()}"
+                if key not in seen_keys:
+                    seen_keys.add(key)
+                    lastfm_tracks.append(t)
+        print(f"[CAMADA 2] Total acumulado: {len(lastfm_tracks)} tracks")
 
     # ========================================
-    # CAMADA 2: Last.fm artist.gettoptracks
-    # ========================================
-    print(f"\n--- CAMADA 2: artist.gettoptracks (artistas do genero) ---")
-    
-    # Buscar artistas via Last.fm tag
-    primary_tag = tags[0] if tags else genre_label
-    genre_artists_from_lastfm = lastfm_tag_topartists(primary_tag, limit=8, page=lastfm_page)
-
-    # Complementa com artistas hardcoded do genero
-    known_artists = GENRE_ARTISTS.get(genre_label, [])
-    
-    # Combina: artistas do Last.fm primeiro, depois os conhecidos
-    all_genre_artists = []
-    seen_artists = set()
-    for a in genre_artists_from_lastfm + known_artists:
-        a_lower = a.lower()
-        if a_lower not in seen_artists:
-            seen_artists.add(a_lower)
-            all_genre_artists.append(a)
-    
-    # Limita a 6 artistas
-    artists_to_query = all_genre_artists[:6]
-
-    for artist_name in artists_to_query:
-        tracks = lastfm_artist_toptracks(artist_name, limit=5)
-        for t in tracks:
-            key = f"{t['name'].lower()}|{t['artist'].lower()}"
-            if key not in seen_keys:
-                seen_keys.add(key)
-                lastfm_tracks.append(t)
-
-    print(f"[CAMADA 2] Total acumulado: {len(lastfm_tracks)} tracks")
-
-    # ========================================
-    # BUSCA NO SPOTIFY + FILTROS
+    # BUSCA NO SPOTIFY + FILTRO DE GENERO
     # ========================================
     print(f"\n--- Buscando no Spotify ---")
     result     = []
-    candidates = lastfm_tracks[:50]
+    candidates = lastfm_tracks[:60]  # um pouco mais para compensar os bloqueados
 
     for t in candidates:
         if len(result) >= 10:
@@ -586,14 +426,13 @@ def get_recommendations(score, genre, data=None):
         try:
             spotify_track = spotify_search_track(t["name"], t["artist"])
             if spotify_track:
-                if passes_nostalgia_filter(spotify_track, nostalgia):
-                    result.append(spotify_track)
-                    release = spotify_track.get("album", {}).get("release_date", "?")
-                    artist_name = spotify_track['artists'][0]['name']
-                    safe_print(f"  [OK] {spotify_track['name']} - {artist_name} ({release})")
-                else:
-                    release = spotify_track.get("album", {}).get("release_date", "?")
-                    safe_print(f"  [SKIP] Filtrado por nostalgia: {spotify_track['name']} ({release})")
+                # Filtra artistas que não pertencem ao gênero
+                if not track_matches_genre(spotify_track, genre_label):
+                    continue
+                result.append(spotify_track)
+                release = spotify_track.get("album", {}).get("release_date", "?")
+                artist_name = spotify_track['artists'][0]['name']
+                safe_print(f"  [OK] {spotify_track['name']} - {artist_name} ({release})")
             else:
                 safe_print(f"  [X] Nao encontrado: {t['name']} - {t['artist']}")
         except spotipy.SpotifyException as e:
@@ -603,37 +442,24 @@ def get_recommendations(score, genre, data=None):
         time.sleep(0.1)
 
     # ========================================
-    # CAMADA 3: Spotify search por genero
+    # CAMADA 3: Spotify search por genero+mood
     # ========================================
     if len(result) < 10:
-        print(f"\n--- CAMADA 3: Spotify search por genero (faltam {10 - len(result)} tracks) ---")
+        print(f"\n--- CAMADA 3: Spotify search por genero+mood (faltam {10 - len(result)} tracks) ---")
         existing_uris = {r.get('uri') for r in result}
-        
+
         spotify_genre_tracks = spotify_search_genre(genre_label, mood, limit=15)
         for st in spotify_genre_tracks:
             if len(result) >= 10:
                 break
             if st.get('uri') not in existing_uris:
-                if passes_nostalgia_filter(st, nostalgia):
-                    result.append(st)
-                    existing_uris.add(st.get('uri'))
-                    safe_print(f"  [OK] (genero) {st['name']} - {st['artists'][0]['name']}")
-
-    # Se ainda nao tem o suficiente, relaxar filtro de nostalgia
-    if len(result) < 5:
-        print(f"\n[RELAXANDO FILTRO] Apenas {len(result)} tracks, buscando sem filtro de data...")
-        existing_uris = {r.get('uri') for r in result}
-        
-        spotify_genre_tracks = spotify_search_genre(genre_label, mood, limit=20)
-        for st in spotify_genre_tracks:
-            if len(result) >= 10:
-                break
-            if st.get('uri') not in existing_uris:
+                if not track_matches_genre(st, genre_label):
+                    continue
                 result.append(st)
                 existing_uris.add(st.get('uri'))
-                safe_print(f"  [OK] (relaxado) {st['name']} - {st['artists'][0]['name']}")
+                safe_print(f"  [OK] (genero) {st['name']} - {st['artists'][0]['name']}")
 
-    print(f"\n[RESULTADO FINAL] {len(result)} musicas do genero '{genre_label}'")
+    print(f"\n[RESULTADO FINAL] {len(result)} musicas do genero '{genre_label}' mood '{mood}'")
     return result
 
 
