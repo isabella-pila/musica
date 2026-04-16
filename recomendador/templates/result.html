@@ -1,22 +1,173 @@
-<h2>Score: {{ score }}</h2>
-<img src="data:image/png;base64,{{ graph }}" />
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 1.5rem; text-align: left; padding-bottom: 0.5rem;">
+  <h3 style="margin-bottom: 0.2rem; font-size: 1.3rem;">Funções de Pertinência</h3>
+  <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0;">Distribuição fuzzy dos estilos musicais</p>
+  
+  <div class="chart-container" style="margin-top: 1.5rem;">
+    <canvas id="fuzzyChart"></canvas>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 1.5rem; padding: 2rem;">
+  <p style="color: var(--text-muted); font-weight: 600; font-size: 0.95rem; margin: 0;">Porcentagem Defuzzificada</p>
+  <div style="font-size: 4.5rem; font-weight: 800; color: var(--brand-orange); line-height: 1.2;">{{ defuzz_percentage }}%</div>
+  <div style="font-size: 1.15rem; font-weight: 700; color: var(--brand-dark);">
+    Resultado: <span style="color: var(--color-teal);">{{ defuzz_category }}</span>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 1.5rem; text-align: left; padding: 1.5rem 2rem;">
+  <h4 style="margin-bottom: 0.5rem; font-size: 1.1rem;">💡 Explicação Fuzzy</h4>
+  <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin: 0;">{{ fuzzy_explanation }}</p>
+</div>
 
 {% if tracks %}
-<ul>
-{% for track in tracks %}
-  <li>
-    {% if track.album.images %}
-      <img src="{{ track.album.images.0.url }}" width="50">
-    {% endif %}
-    {{ track.name }} - {{ track.artists.0.name }}
-  </li>
-{% endfor %}
-</ul>
-
-<a href="{% url 'spotify_login' %}">
-  <button>🎵 Salvar playlist no Spotify</button>
-</a>
+<div class="card" style="margin-bottom: 1.5rem; text-align: left;">
+  <h3 style="margin-bottom: 1rem;">Músicas Recomendadas</h3>
+  <ul class="track-list">
+    {% for track in tracks %}
+    <li class="track-item">
+      {% if track.album.images %}
+        <img src="{{ track.album.images.0.url }}" alt="{{ track.name }}">
+      {% else %}
+        <img src="https://via.placeholder.com/56?text=🎵" alt="Sem capa">
+      {% endif %}
+      <div class="track-info">
+        <span class="track-name">{{ track.name }}</span>
+        <span class="track-artist">{{ track.artists.0.name }}</span>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
 
 {% else %}
-<p>Nenhuma recomendação encontrada.</p>
+<div class="card text-center mt-4">
+  <span class="icon" style="font-size: 3rem;">📭</span>
+  <p style="color: var(--text-muted); font-size: 1.1rem; margin-top: 1rem;">Nenhuma recomendação encontrada para a vibe escolhida.</p>
+</div>
 {% endif %}
+
+<div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem;">
+  <a href="{% url 'spotify_login' %}" style="width: 100%;">
+    <button class="btn-spotify">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.495 17.348c-.218.358-.684.475-1.042.257-2.857-1.745-6.452-2.14-10.697-1.171-.41.094-.814-.162-.907-.573-.094-.41.162-.814.573-.907 4.63-.1058 8.601-.618 11.815-2.584.358-.218.824-.101 1.042.257.218.358.101.824-.257 1.042zm1.488-3.324c-.276.45-1.002.597-1.45.321-3.27-2.008-8.324-2.607-11.458-1.658-.517.156-1.059-.135-1.216-.653-.156-.517.135-1.06.653-1.216 3.619-1.094 9.176-.427 12.98 1.91.45.276.597.868.321 1.318zm.135-3.468c-3.92-2.327-10.39-2.542-14.15-1.405-.623.189-1.282-.162-1.472-.787-.189-.623.162-1.282.787-1.472 4.331-1.309 11.459-1.066 16.002 1.626.565.334.752 1.065.418 1.63-.334.565-1.065.752-1.63.418z"/>
+      </svg>
+      SALVAR PLAYLIST NO SPOTIFY
+    </button>
+  </a>
+  <a href="{% url 'index' %}" style="width: 100%;">
+    <button style="background: var(--card-bg); color: var(--brand-dark); border: 2px solid #EAEAEA; box-shadow: none;">
+      GERAR OUTRA PLAYLIST
+    </button>
+  </a>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const ctx = document.getElementById('fuzzyChart').getContext('2d');
+  
+  // Custom plugin to draw vertical line at defuzzified value
+  const verticalLinePlugin = {
+    id: 'verticalLinePlugin',
+    afterDraw: (chart) => {
+      const defuzzVal = {{ defuzz_percentage }};
+      const xAxis = chart.scales.x;
+      const yAxis = chart.scales.y;
+      
+      const xPixel = xAxis.getPixelForValue(defuzzVal);
+      const ctx = chart.ctx;
+      
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(xPixel, yAxis.top);
+      ctx.lineTo(xPixel, yAxis.bottom);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "rgba(0,0,0,0.4)";
+      ctx.setLineDash([5, 5]);
+      ctx.stroke();
+      
+      // Draw a small dot at the top
+      ctx.beginPath();
+      ctx.arc(xPixel, yAxis.top, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = "rgba(0,0,0,0.6)";
+      ctx.fill();
+      ctx.restore();
+    }
+  };
+
+  const chart = new Chart(ctx, {
+    type: 'scatter',
+    plugins: [verticalLinePlugin],
+    data: {
+      datasets: [
+        {
+          label: 'Calmo',
+          data: [{x: 0, y: 1}, {x: 25, y: 0}],
+          borderColor: '#88c9c4',
+          backgroundColor: 'rgba(136, 201, 196, 0.2)',
+          showLine: true, fill: true, tension: 0, pointRadius: 0
+        },
+        {
+          label: 'Tranquilo',
+          data: [{x: 15, y: 0}, {x: 30, y: 1}, {x: 45, y: 0}],
+          borderColor: '#a0d4a4',
+          backgroundColor: 'rgba(160, 212, 164, 0.2)',
+          showLine: true, fill: true, tension: 0, pointRadius: 0
+        },
+        {
+          label: 'Moderado',
+          data: [{x: 35, y: 0}, {x: 50, y: 1}, {x: 65, y: 0}],
+          borderColor: '#e0c25b',
+          backgroundColor: 'rgba(224, 194, 91, 0.2)',
+          showLine: true, fill: true, tension: 0, pointRadius: 0
+        },
+        {
+          label: 'Alegre',
+          data: [{x: 55, y: 0}, {x: 70, y: 1}, {x: 85, y: 0}],
+          borderColor: '#f1ba76',
+          backgroundColor: 'rgba(241, 186, 118, 0.2)',
+          showLine: true, fill: true, tension: 0, pointRadius: 0
+        },
+        {
+          label: 'Agitado',
+          data: [{x: 75, y: 0}, {x: 100, y: 1}],
+          borderColor: '#e27d60',
+          backgroundColor: 'rgba(226, 125, 96, 0.2)',
+          showLine: true, fill: true, tension: 0, pointRadius: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          type: 'linear',
+          min: 0, max: 100,
+          ticks: { stepSize: 4, color: '#A3A3A3' },
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          title: { display: true, text: 'Intensidade (%)', color: '#A3A3A3' }
+        },
+        y: {
+          min: 0, max: 1,
+          ticks: { stepSize: 0.25, color: '#A3A3A3' },
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          title: { display: true, text: 'μ(x)', color: '#A3A3A3' }
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { usePointStyle: true, boxWidth: 10 }
+        },
+        tooltip: { enabled: false }
+      }
+    }
+  });
+});
+</script>
+{% endblock %}

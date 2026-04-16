@@ -18,9 +18,9 @@ energy['calma']    = fuzz.trimf(energy.universe, [0, 0, 0.45])
 energy['moderada'] = fuzz.trimf(energy.universe, [0.35, 0.5, 0.65])
 energy['agitada']  = fuzz.trimf(energy.universe, [0.55, 1, 1])
 
-acousticness['eletronica'] = fuzz.trimf(acousticness.universe, [0, 0, 0.45])
+acousticness['acustica']   = fuzz.trimf(acousticness.universe, [0, 0, 0.45])
 acousticness['mista']      = fuzz.trimf(acousticness.universe, [0.35, 0.5, 0.65])
-acousticness['acustica']   = fuzz.trimf(acousticness.universe, [0.55, 1, 1])
+acousticness['eletronica'] = fuzz.trimf(acousticness.universe, [0.55, 1, 1])
 
 # Saída com 5 níveis
 playlist_score['muito_baixa'] = fuzz.trimf(playlist_score.universe, [0,    0,    0.25])

@@ -1,6 +1,17 @@
-<h2>✅ Playlist criada com sucesso!</h2>
-<a href="{{ playlist_url }}" target="_blank">
-  Abrir no Spotify
-</a>
-<br>
-<a href="{% url 'index' %}">Gerar nova playlist</a>
+{% extends 'base.html' %}
+{% block content %}
+<div class="card text-center" style="margin-bottom: 2rem; padding: 4rem 2rem;">
+  <span class="success-icon" style="color: var(--color-spotify); font-size: 5rem; display: block; margin-bottom: 1.5rem; text-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);">🎉</span>
+  <h2 style="font-size: 2rem; margin-bottom: 0.8rem;">Playlist Criada com Sucesso!</h2>
+  <p style="color: var(--text-muted); font-size: 1.15rem; margin-bottom: 3rem; font-weight: 500;">Sua nova vibe já está salva na sua conta do Spotify.</p>
+  
+  <a href="{{ playlist_url }}" target="_blank">
+    <button class="btn-spotify" style="width: auto; padding: 1.2rem 3rem; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style="margin-right: 12px;">
+        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.495 17.348c-.218.358-.684.475-1.042.257-2.857-1.745-6.452-2.14-10.697-1.171-.41.094-.814-.162-.907-.573-.094-.41.162-.814.573-.907 4.63-.1058 8.601-.618 11.815-2.584.358-.218.824-.101 1.042.257.218.358.101.824-.257 1.042zm1.488-3.324c-.276.45-1.002.597-1.45.321-3.27-2.008-8.324-2.607-11.458-1.658-.517.156-1.059-.135-1.216-.653-.156-.517.135-1.06.653-1.216 3.619-1.094 9.176-.427 12.98 1.91.45.276.597.868.321 1.318zm.135-3.468c-3.92-2.327-10.39-2.542-14.15-1.405-.623.189-1.282-.162-1.472-.787-.189-.623.162-1.282.787-1.472 4.331-1.309 11.459-1.066 16.002 1.626.565.334.752 1.065.418 1.63-.334.565-1.065.752-1.63.418z"/>
+      </svg>
+      ABRIR PLAYLIST NO SPOTIFY
+    </button>
+  </a>
+</div>
+{% endblock %}

@@ -2,10 +2,7 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse, JsonResponse
 from .fuzzy import compute_fuzzy
 from .spotify_service import get_recommendations, create_playlist, build_sp
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import io, base64
+
 
 from spotipy.oauth2 import SpotifyOAuth
 from django.conf import settings
@@ -19,7 +16,7 @@ def get_sp_oauth():
         client_id=settings.SPOTIPY_CLIENT_ID,
         client_secret=settings.SPOTIPY_CLIENT_SECRET,
         redirect_uri=settings.SPOTIPY_REDIRECT_URI,
-        scope="playlist-read-public playlist-read-private playlist-modify-public playlist-modify-private",
+        scope="playlist-read-private playlist-modify-public playlist-modify-private",
         show_dialog=True
     )
 
@@ -51,47 +48,31 @@ def result_view(request):
         genre = request.POST.get('genre')
         score = compute_fuzzy(fuzzy_inputs)
 
-        # Salva os dados do formulário na sessão ANTES de ir para o login
-        request.session['pending_fuzzy']   = fuzzy_inputs
-        request.session['pending_filters'] = spotify_filters
-        request.session['pending_genre']   = genre
-        request.session['pending_score']   = score
-
-        # Se não tem token ainda, vai para o login do Spotify primeiro
-        token_info = request.session.get('token_info')
-        if not token_info:
-            return redirect('spotify_login')
-
-        # Renova o token se estiver expirado
-        sp_oauth = get_sp_oauth()
-        if sp_oauth.is_token_expired(token_info):
-            token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
-            request.session['token_info'] = token_info
-
-        # Inicializa o Spotipy com o token do usuário
-        build_sp(token_info['access_token'])
-
         tracks = get_recommendations(score, genre, spotify_filters)
 
         request.session['tracks'] = [t['uri'] for t in tracks if t.get('uri')]
         request.session['score']  = score
         request.session['genre']  = genre
 
-        # Gráfico
-        fig, ax = plt.subplots()
-        ax.bar(['Score'], [score])
-        ax.set_title('Score Fuzzy da Playlist')
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png')
-        buf.seek(0)
-        graph = base64.b64encode(buf.read()).decode('utf-8')
-        buf.close()
-        plt.close(fig)
+        defuzz_percentage = int(round(score * 100))
+        if score <= 0.25: defuzz_category = "Calmo"
+        elif score <= 0.45: defuzz_category = "Tranquilo"
+        elif score <= 0.65: defuzz_category = "Moderado"
+        elif score <= 0.85: defuzz_category = "Alegre"
+        else: defuzz_category = "Agitado"
+
+        v_level = "Alto" if fuzzy_inputs['valence'] >= 0.55 else "Baixo" if fuzzy_inputs['valence'] <= 0.45 else "Médio"
+        e_level = "Alto" if fuzzy_inputs['energy'] >= 0.55 else "Baixo" if fuzzy_inputs['energy'] <= 0.45 else "Médio"
+        a_level = "Alta" if fuzzy_inputs['acousticness'] >= 0.55 else "Baixa" if fuzzy_inputs['acousticness'] <= 0.45 else "Média"
+        
+        fuzzy_explanation = f"Como você combinou Felicidade de nível {v_level}, Energia num patamar {e_level} e densidade Acústica {a_level}, a lógica fuzzy ponderou as regras e resultou num estilo {defuzz_category} ({defuzz_percentage}%)."
 
         return render(request, 'result.html', {
             'tracks': tracks,
-            'graph':  graph,
             'score':  round(score, 3),
+            'defuzz_percentage': defuzz_percentage,
+            'defuzz_category': defuzz_category,
+            'fuzzy_explanation': fuzzy_explanation
         })
 
     return redirect('index')
@@ -121,36 +102,7 @@ def callback(request):
 
     request.session['token_info'] = token_info
 
-    # ✅ Inicializa o sp do spotify_service com o token do usuário
-    build_sp(token_info['access_token'])
-
-    # Se veio de um formulário pendente (primeiro login), gera as recomendações agora
-    pending_score   = request.session.pop('pending_score', None)
-    pending_genre   = request.session.pop('pending_genre', None)
-    pending_filters = request.session.pop('pending_filters', {})
-
-    if pending_score is not None:
-        tracks = get_recommendations(pending_score, pending_genre, pending_filters)
-        request.session['tracks'] = [t['uri'] for t in tracks if t.get('uri')]
-        request.session['score']  = pending_score
-        request.session['genre']  = pending_genre
-
-        # Gráfico
-        fig, ax = plt.subplots()
-        ax.bar(['Score'], [pending_score])
-        ax.set_title('Score Fuzzy da Playlist')
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png')
-        buf.seek(0)
-        graph = base64.b64encode(buf.read()).decode('utf-8')
-        buf.close()
-        plt.close(fig)
-
-        return render(request, 'result.html', {
-            'tracks': tracks,
-            'graph':  graph,
-            'score':  round(pending_score, 3),
-        })
+    # Fluxo normal: criar playlist com tracks já salvos
 
     # Fluxo normal: criar playlist com tracks já salvos
     track_uris = request.session.get('tracks', [])

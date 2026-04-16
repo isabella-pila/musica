@@ -1,0 +1,55 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>harmonIA — A inteligência artificial que entende o que você sente.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'recomendador/css/style.css' %}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <header>
+    <a href="{% url 'index' %}" style="text-decoration: none;">
+      <h1 class="brand-title"><span class="harmon">harmon</span><span class="ia">IA</span></h1>
+    </a>
+    <div class="brand-subtitle">A inteligência artificial que entende o que você sente.</div>
+  </header>
+
+  <main class="container">
+    {% block content %}
+    {% endblock %}
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const sliders = document.querySelectorAll('input[type="range"]');
+      sliders.forEach(slider => {
+        const display = document.getElementById(slider.name + '-val');
+        
+        const updateSlider = function(el) {
+            if (display) display.textContent = Number(el.value).toFixed(2);
+            const percentage = ((el.value - el.min) / (el.max - el.min)) * 100;
+            let bgColor = "#ECECEC";
+            let fillColor = "#999";
+            if(el.classList.contains('slider-orange')) fillColor = "#F1896A";
+            else if(el.classList.contains('slider-teal')) fillColor = "#88C9C4";
+            else if(el.classList.contains('slider-gold')) fillColor = "#E0C25B";
+            
+            el.style.background = `linear-gradient(to right, ${fillColor} ${percentage}%, ${bgColor} ${percentage}%)`;
+        };
+        
+        updateSlider(slider);
+        
+        slider.addEventListener('input', function() {
+            updateSlider(this);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

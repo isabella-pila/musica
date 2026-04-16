@@ -1,54 +1,87 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <title>FuzzyMood — Recomendador de Músicas</title>
-</head>
-<body>
-<h1>🎵 FuzzyMood — Recomendador de Músicas</h1>
+{% extends 'base.html' %}
 
+{% block content %}
 <form method="POST" action="{% url 'result' %}">
   {% csrf_token %}
 
-  <label>Felicidade (Valence)</label><br>
-  <input type="range" step="0.01" name="valence" min="0" max="1" value="0.5"><br><br>
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <div class="slider-wrapper" style="margin-bottom: 3rem;">
+      <div class="slider-labels">
+        <span>Triste</span>
+        <span>Feliz</span>
+      </div>
+      <span class="slider-val-center val-orange" id="valence-val">0.50</span>
+      <input type="range" class="slider-orange" step="0.01" name="valence" id="valence" min="0" max="1" value="0.50">
+    </div>
 
-  <label>Energia</label><br>
-  <input type="range" step="0.01" name="energy" min="0" max="1" value="0.5"><br><br>
+    <div class="slider-wrapper" style="margin-bottom: 3rem;">
+      <div class="slider-labels">
+        <span>Letárgico</span>
+        <span>Eufórico</span>
+      </div>
+      <span class="slider-val-center val-teal" id="energy-val">0.50</span>
+      <input type="range" class="slider-teal" step="0.01" name="energy" id="energy" min="0" max="1" value="0.50">
+    </div>
 
-  <label>Acousticness</label><br>
-  <input type="range" step="0.01" name="acousticness" min="0" max="1" value="0.5"><br><br>
+    <div class="slider-wrapper" style="margin-bottom: 1rem;">
+      <div class="slider-labels">
+        <span>Acústica</span>
+        <span>Eletrônica</span>
+      </div>
+      <span class="slider-val-center val-gold" id="acousticness-val">0.50</span>
+      <input type="range" class="slider-gold" step="0.01" name="acousticness" id="acousticness" min="0" max="1" value="0.50">
+    </div>
+  </div>
 
-  <label>Popularidade (0 = underground, 100 = mainstream)</label><br>
-  <input type="range" step="1" name="popularity" min="0" max="100" value="50"><br><br>
+  <div class="card" style="margin-bottom: 1.5rem; text-align: left; padding: 1.5rem 2rem;">
+    <div style="margin-bottom: 1.5rem;">
+      <label style="margin-bottom: 0.5rem; font-size: 0.95rem;">Filtro: Popularidade</label>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <span style="font-size:0.85rem; color:#A3A3A3;">Desconhecida</span>
+        <input type="range" class="slider-gray" step="1" name="popularity" id="popularity" min="0" max="100" value="50">
+        <span style="font-size:0.85rem; color:#A3A3A3;">Famosa</span>
+        <span id="popularity-val" style="display:none;"></span>
+      </div>
+    </div>
+    
+    <div style="margin-bottom: 1.5rem;">
+      <label style="margin-bottom: 0.5rem; font-size: 0.95rem;">Filtro: Nostalgia</label>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <span style="font-size:0.85rem; color:#A3A3A3;">Novas</span>
+        <input type="range" class="slider-gray" step="1" name="nostalgia" id="nostalgia" min="0" max="100" value="50">
+        <span style="font-size:0.85rem; color:#A3A3A3;">Clássicas</span>
+        <span id="nostalgia-val" style="display:none;"></span>
+      </div>
+    </div>
 
-  <label>Nostalgia (0 = músicas novas, 100 = clássicos)</label><br>
-  <input type="range" step="1" name="nostalgia" min="0" max="100" value="50"><br><br>
+    <div>
+      <label style="margin-bottom: 0.5rem; font-size: 0.95rem;">Gênero Musical Base</label>
+      <select name="genre">
+        <option value="pop" selected>Pop</option>
+        <option value="rock">Rock</option>
+        <option value="hip-hop">Hip-Hop / Rap</option>
+        <option value="electronic">Eletrônica</option>
+        <option value="funk">Funk</option>
+        <option value="sertanejo">Sertanejo</option>
+        <option value="pagode">Pagode</option>
+        <option value="forro">Forró</option>
+        <option value="mpb">MPB</option>
+        <option value="samba">Samba</option>
+        <option value="axe">Axé</option>
+        <option value="jazz">Jazz</option>
+        <option value="classical">Clássica</option>
+        <option value="blues">Blues</option>
+        <option value="reggaeton">Reggaeton</option>
+        <option value="r&b">R&B</option>
+        <option value="indie">Indie</option>
+        <option value="metal">Metal</option>
+        <option value="country">Country</option>
+      </select>
+    </div>
+  </div>
 
-  <label>Gênero</label><br>
-  <select name="genre">
-    <option value="pop" selected>Pop</option>
-    <option value="rock">Rock</option>
-    <option value="hip-hop">Hip-Hop / Rap</option>
-    <option value="electronic">Eletrônica</option>
-    <option value="funk">Funk</option>
-    <option value="sertanejo">Sertanejo</option>
-    <option value="pagode">Pagode</option>
-    <option value="forro">Forró</option>
-    <option value="mpb">MPB</option>
-    <option value="samba">Samba</option>
-    <option value="axe">Axé</option>
-    <option value="jazz">Jazz</option>
-    <option value="classical">Clássica</option>
-    <option value="blues">Blues</option>
-    <option value="reggaeton">Reggaeton</option>
-    <option value="r&b">R&B</option>
-    <option value="indie">Indie</option>
-    <option value="metal">Metal</option>
-    <option value="country">Country</option>
-  </select><br><br>
-
-  <button type="submit">🎶 Recomendar</button>
+  <button type="submit">
+    Recomendar Estilo Musical
+  </button>
 </form>
-</body>
-</html>
+{% endblock %}

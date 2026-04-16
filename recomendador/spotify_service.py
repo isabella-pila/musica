@@ -14,12 +14,16 @@ def build_sp(access_token):
     _sp_user = spotipy.Spotify(auth=access_token)
     return _sp_user
 
+_sp_client = None
 def get_sp():
-    auth = SpotifyClientCredentials(
-        client_id=settings.SPOTIPY_CLIENT_ID,
-        client_secret=settings.SPOTIPY_CLIENT_SECRET
-    )
-    return spotipy.Spotify(auth_manager=auth)
+    global _sp_client
+    if _sp_client is None:
+        auth = SpotifyClientCredentials(
+            client_id=settings.SPOTIPY_CLIENT_ID,
+            client_secret=settings.SPOTIPY_CLIENT_SECRET
+        )
+        _sp_client = spotipy.Spotify(auth_manager=auth, retries=0)
+    return _sp_client
 
 
 # =========================
@@ -254,6 +258,11 @@ def spotify_search_track(name, artist):
         results = sp.search(q=f"{name} {artist}", type="track", limit=1, market="BR")
         items   = results.get("tracks", {}).get("items", [])
         return items[0] if items else None
+    except spotipy.SpotifyException as e:
+        if e.http_status == 429:
+            raise e
+        print(f"[SPOTIFY] Erro '{name} - {artist}': {e}")
+        return None
     except Exception as e:
         print(f"[SPOTIFY] Erro '{name} - {artist}': {e}")
         return None
@@ -333,15 +342,21 @@ def get_recommendations(score, genre, data=None):
     candidates = lastfm_tracks[:30] # máximo 15 candidatos → máximo 15 chamadas
 
     for t in candidates:
-        if len(result) >= 20:
+        if len(result) >= 10: # Limitamos a 10 para poupar cota
             break
-        spotify_track = spotify_search_track(t["name"], t["artist"])
-        if spotify_track:
-            result.append(spotify_track)
-            print(f"  ✔ {spotify_track['name']} - {spotify_track['artists'][0]['name']}")
-        else:
-            print(f"  ✘ Não encontrado: {t['name']} - {t['artist']}")
-        time.sleep(0.2)  # 200ms entre chamadas evita burst que causa rate limit
+        try:
+            spotify_track = spotify_search_track(t["name"], t["artist"])
+            if spotify_track:
+                result.append(spotify_track)
+                print(f"  ✔ {spotify_track['name']} - {spotify_track['artists'][0]['name']}")
+            else:
+                print(f"  ✘ Não encontrado: {t['name']} - {t['artist']}")
+        except spotipy.SpotifyException as e:
+            if getattr(e, 'http_status', None) == 429:
+                print("⏳ Rate Limit do Spotify atingido. Abortando buscas extras para exibir a tela imediatamente.")
+                break
+            
+        time.sleep(0.1)  
 
     print(f"\n[RESULTADO] {len(result)} músicas")
     return result
