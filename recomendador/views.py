@@ -5,7 +5,6 @@ from .spotify_service import (
     get_recommendations, create_playlist, build_sp,
 )
 
-
 from spotipy.oauth2 import SpotifyOAuth
 from django.conf import settings
 
@@ -52,23 +51,48 @@ def result_view(request):
         request.session['genre']  = genre
 
         defuzz_percentage = int(round(score * 100))
-        if score <= 0.25: defuzz_category = "Calmo"
-        elif score <= 0.45: defuzz_category = "Tranquilo"
-        elif score <= 0.65: defuzz_category = "Moderado"
-        elif score <= 0.85: defuzz_category = "Alegre"
-        else: defuzz_category = "Agitado"
 
-        v_level = "Alto" if fuzzy_inputs['valence'] >= 0.55 else "Baixo" if fuzzy_inputs['valence'] <= 0.45 else "Médio"
-        e_level = "Alto" if fuzzy_inputs['energy'] >= 0.55 else "Baixo" if fuzzy_inputs['energy'] <= 0.45 else "Médio"
-        a_level = "Alta" if fuzzy_inputs['acousticness'] >= 0.55 else "Baixa" if fuzzy_inputs['acousticness'] <= 0.45 else "Média"
+        # Limiares alinhados aos 5 moods do spotify_service
+        if score < 0.20:
+            defuzz_category = "Calmo"
+        elif score < 0.40:
+            defuzz_category = "Tranquilo"
+        elif score < 0.60:
+            defuzz_category = "Moderado"
+        elif score < 0.80:
+            defuzz_category = "Alegre"
+        else:
+            defuzz_category = "Agitado"
 
-        fuzzy_explanation = f"Como você combinou Felicidade de nível {v_level}, Energia num patamar {e_level} e densidade Acústica {a_level}, a lógica fuzzy ponderou as regras e resultou num estilo {defuzz_category} ({defuzz_percentage}%)."
+        # Felicidade (valence)
+        v = fuzzy_inputs['valence']
+        v_level = "Alto" if v >= 0.55 else "Baixo" if v <= 0.45 else "Médio"
+
+        # Energia
+        e = fuzzy_inputs['energy']
+        e_level = "Alto" if e >= 0.55 else "Baixo" if e <= 0.45 else "Médio"
+
+        # Acousticness: slider alto = som eletrônico, slider baixo = som acústico
+        a = fuzzy_inputs['acousticness']
+        if a >= 0.55:
+            a_level = "Eletrônica"
+        elif a <= 0.45:
+            a_level = "Acústica"
+        else:
+            a_level = "Mista"
+
+        fuzzy_explanation = (
+            f"Como você combinou Felicidade de nível {v_level}, "
+            f"Energia num patamar {e_level} e "
+            f"sonoridade {a_level}, "
+            f"a lógica fuzzy ponderou as regras e resultou num estilo {defuzz_category} ({defuzz_percentage}%)."
+        )
 
         return render(request, 'result.html', {
-            'tracks': tracks,
-            'score':  round(score, 3),
+            'tracks':            tracks,
+            'score':             round(score, 3),
             'defuzz_percentage': defuzz_percentage,
-            'defuzz_category': defuzz_category,
+            'defuzz_category':   defuzz_category,
             'fuzzy_explanation': fuzzy_explanation,
         })
 
@@ -138,9 +162,9 @@ def teste_playlist(request):
         tracks = get_tracks_from_playlist(pid)
         resultado.append({
             "playlist": p.get("name"),
-            "id": pid,
+            "id":       pid,
             "tracks_count": len(tracks),
-            "erro": "VAZIO" if not tracks else "OK",
+            "erro":     "VAZIO" if not tracks else "OK",
             "primeira_musica": tracks[0].get("name") if tracks else None,
         })
     return JsonResponse({"playlists": resultado})

@@ -8,19 +8,25 @@ energy       = ctrl.Antecedent(np.arange(0, 1.01, 0.01), 'energy')
 acousticness = ctrl.Antecedent(np.arange(0, 1.01, 0.01), 'acousticness')
 
 playlist_score = ctrl.Consequent(np.arange(0, 1.01, 0.01), 'playlist_score')
-#socorro
-# Memberships — entradas
-valence['triste'] = fuzz.trimf(valence.universe, [0, 0, 0.45])
-valence['neutra'] = fuzz.trimf(valence.universe, [0.35, 0.5, 0.65])
-valence['feliz']  = fuzz.trimf(valence.universe, [0.55, 1, 1])
 
-energy['calma']    = fuzz.trimf(energy.universe, [0, 0, 0.45])
-energy['moderada'] = fuzz.trimf(energy.universe, [0.35, 0.5, 0.65])
-energy['agitada']  = fuzz.trimf(energy.universe, [0.55, 1, 1])
+# =========================
+# MEMBERSHIPS — ENTRADAS
+# triste/calma/acustica dominam apenas abaixo de 0.15
+# neutra/moderada/mista cobrem a região central (0.15 a 0.85)
+# feliz/agitada/eletronica dominam acima de 0.70
+# Assim slider em 0.25 é considerado neutro, não triste
+# =========================
+valence['triste'] = fuzz.trimf(valence.universe, [0,    0,    0.30])
+valence['neutra'] = fuzz.trimf(valence.universe, [0.15, 0.50, 0.85])
+valence['feliz']  = fuzz.trimf(valence.universe, [0.70, 1,    1   ])
 
-acousticness['acustica']   = fuzz.trimf(acousticness.universe, [0, 0, 0.45])
-acousticness['mista']      = fuzz.trimf(acousticness.universe, [0.35, 0.5, 0.65])
-acousticness['eletronica'] = fuzz.trimf(acousticness.universe, [0.55, 1, 1])
+energy['calma']    = fuzz.trimf(energy.universe, [0,    0,    0.30])
+energy['moderada'] = fuzz.trimf(energy.universe, [0.15, 0.50, 0.85])
+energy['agitada']  = fuzz.trimf(energy.universe, [0.70, 1,    1   ])
+
+acousticness['acustica']   = fuzz.trimf(acousticness.universe, [0,    0,    0.30])
+acousticness['mista']      = fuzz.trimf(acousticness.universe, [0.15, 0.50, 0.85])
+acousticness['eletronica'] = fuzz.trimf(acousticness.universe, [0.70, 1,    1   ])
 
 # Saída com 5 níveis
 playlist_score['muito_baixa'] = fuzz.trimf(playlist_score.universe, [0,    0,    0.25])
@@ -60,7 +66,6 @@ rules = [
     ctrl.Rule(valence['triste'] & acousticness['eletronica'], playlist_score['baixa']),
 
     # CATEGORIA 4: VIBES ESPECÍFICAS
-   
     ctrl.Rule(valence['feliz']  & energy['agitada']  & acousticness['eletronica'], playlist_score['muito_alta']),
     ctrl.Rule(valence['triste'] & energy['agitada']  & acousticness['eletronica'], playlist_score['baixa']),
     ctrl.Rule(valence['triste'] & energy['calma']    & acousticness['acustica'],   playlist_score['muito_baixa']),
@@ -70,12 +75,12 @@ rules = [
     ctrl.Rule(valence['neutra'] & energy['agitada']  & acousticness['mista'],      playlist_score['alta']),
 
     # CATEGORIA 5: FALLBACKS
-    ctrl.Rule(energy['agitada'],   playlist_score['alta']),
-    ctrl.Rule(energy['calma'],     playlist_score['baixa']),
-    ctrl.Rule(energy['moderada'],  playlist_score['media']),
-    ctrl.Rule(valence['feliz'],    playlist_score['alta']),
-    ctrl.Rule(valence['triste'],   playlist_score['muito_baixa']),
-    ctrl.Rule(valence['neutra'],   playlist_score['media']),
+    ctrl.Rule(energy['agitada'],          playlist_score['alta']),
+    ctrl.Rule(energy['calma'],            playlist_score['baixa']),
+    ctrl.Rule(energy['moderada'],         playlist_score['media']),
+    ctrl.Rule(valence['feliz'],           playlist_score['alta']),
+    ctrl.Rule(valence['triste'],          playlist_score['muito_baixa']),
+    ctrl.Rule(valence['neutra'],          playlist_score['media']),
     ctrl.Rule(acousticness['eletronica'], playlist_score['alta']),
     ctrl.Rule(acousticness['acustica'],   playlist_score['baixa']),
     ctrl.Rule(acousticness['mista'],      playlist_score['media']),
@@ -84,10 +89,16 @@ rules = [
 system    = ctrl.ControlSystem(rules)
 simulator = ctrl.ControlSystemSimulation(system)
 
+# Limites calculados por varredura completa com as novas memberships
+_SCORE_MIN = 0.1854
+_SCORE_MAX = 0.7982
+
 
 def compute_fuzzy(inputs):
     simulator.input['valence']      = inputs['valence']
     simulator.input['energy']       = inputs['energy']
     simulator.input['acousticness'] = inputs['acousticness']
     simulator.compute()
-    return simulator.output['playlist_score']
+    raw = simulator.output['playlist_score']
+    normalized = (raw - _SCORE_MIN) / (_SCORE_MAX - _SCORE_MIN)
+    return max(0.0, min(1.0, normalized))
