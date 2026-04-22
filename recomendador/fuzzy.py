@@ -2,20 +2,13 @@ import numpy as np
 import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 
-# Variáveis de entrada (apenas emoção/sonoridade)
+# Variáveis de entrada
 valence      = ctrl.Antecedent(np.arange(0, 1.01, 0.01), 'valence')
 energy       = ctrl.Antecedent(np.arange(0, 1.01, 0.01), 'energy')
 acousticness = ctrl.Antecedent(np.arange(0, 1.01, 0.01), 'acousticness')
 
 playlist_score = ctrl.Consequent(np.arange(0, 1.01, 0.01), 'playlist_score')
 
-# =========================
-# MEMBERSHIPS — ENTRADAS
-# triste/calma/acustica dominam apenas abaixo de 0.15
-# neutra/moderada/mista cobrem a região central (0.15 a 0.85)
-# feliz/agitada/eletronica dominam acima de 0.70
-# Assim slider em 0.25 é considerado neutro, não triste
-# =========================
 valence['triste'] = fuzz.trimf(valence.universe, [0,    0,    0.30])
 valence['neutra'] = fuzz.trimf(valence.universe, [0.15, 0.50, 0.85])
 valence['feliz']  = fuzz.trimf(valence.universe, [0.70, 1,    1   ])
@@ -89,7 +82,6 @@ rules = [
 system    = ctrl.ControlSystem(rules)
 simulator = ctrl.ControlSystemSimulation(system)
 
-# Limites calculados por varredura completa com as novas memberships
 _SCORE_MIN = 0.1854
 _SCORE_MAX = 0.7982
 

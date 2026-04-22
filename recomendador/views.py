@@ -146,25 +146,3 @@ def callback(request):
     })
 
 
-# =========================
-# Teste (pode remover depois)
-# =========================
-def teste_playlist(request):
-    token_info = request.session.get('token_info')
-    if not token_info:
-        return JsonResponse({"erro": "Não autenticado. Acesse /login/ primeiro."})
-
-    build_sp(token_info['access_token'])
-    playlists = search_playlists("rock triste sad", limit=3)
-    resultado = []
-    for p in playlists:
-        pid = p.get("id")
-        tracks = get_tracks_from_playlist(pid)
-        resultado.append({
-            "playlist": p.get("name"),
-            "id":       pid,
-            "tracks_count": len(tracks),
-            "erro":     "VAZIO" if not tracks else "OK",
-            "primeira_musica": tracks[0].get("name") if tracks else None,
-        })
-    return JsonResponse({"playlists": resultado})
