@@ -188,8 +188,6 @@ def ytm_get_playlist_tracks(genre_label, mood, top_n=15):
 
 # =========================
 # SPOTIFY: CROSS-SEARCH DIRETO VIA REQUESTS
-# Usa requests puro em vez de spotipy para ter controle total
-# sobre erros 429 — sem retry automático que trava o servidor
 # =========================
 def spotify_find_track(title, artist):
     """
