@@ -37,7 +37,7 @@ SECRET_KEY = 'django-insecure-7u_kqcrk7oqwr3sj6rtpe%_!@7b^1nn02n1qguvm(knz*5(h%x
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    'detetive-production.up.railway.app',
+    'musica-production-3dbc.up.railway.app',
     'localhost',
     '127.0.0.1',
 ]
